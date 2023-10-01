@@ -10,10 +10,12 @@
 
 ## Anime
 ### optimization!!!
-- [ ] decrypt it from rust not with openssl
-- [ ] combine ep and ep_ids into an hashmamp
-- [ ] make it run fasterr!!!
-- [ ] remove the infinite loop when changing to the next ep if there even is one ?
+- [ ] decrypt it from rust not with the openssl app ?
+
+- [x] remove the infinite loop when changing to the next ep if there even is one ?
+
+
+
 
 ### needed for video and subs:
 - [x] get the ep id from anime name and number of ep example: (2295 from "https://aniwatch.to/watch/one-piece-100?ep=2295")
