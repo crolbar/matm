@@ -9,11 +9,10 @@
 
 
 ## Anime
-### optimization!!!
 - [ ] decrypt it from rust not with the openssl app ?
-
-- [x] remove the infinite loop when changing to the next ep if there even is one ?
-
+- [x] remove the recursion when changing to the next ep
+- [ ] history
+- [ ] select to watch dubbed ?
 
 
 
