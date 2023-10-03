@@ -17,8 +17,8 @@ pub fn search_anime() {
             vec!["--reverse".to_string(), format!("--header=Current ep - {} of {}", ani.ep, ani.name)]).to_string();
 
         match select.as_str() {
-            "next" => ani.ep += 1,
-            "previous" => ani.ep -= 1,
+            "next" => {ani.ep += 1; if ani.ep >= ani.ep_ids.len() {println!("{}Episode out of bound", "\x1b[31m"); std::process::exit(0)}},
+            "previous" => {ani.ep -= 1; if ani.ep <= 0 {println!("{}Episode out of bound", "\x1b[31m")}; std::process::exit(0)},
             "search" => {
                 let mut query = String::new();
                 println!("{}Search for anime: {}", "\x1b[34m", "\x1b[0m");

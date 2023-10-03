@@ -10,6 +10,19 @@ struct Man {
     chapter: String
 }
 
+pub fn search_manga() {
+    if std::fs::metadata("/tmp/mani").is_err() { std::fs::create_dir_all("/tmp/mani/imgs").unwrap() }
+    let mut query = String::new();
+    println!("{}Search for manga: {}", "\x1b[34m", "\x1b[0m");
+    std::io::stdin().read_line(&mut query).expect("reading stdin");
+    let mut man = select_manga(&query.replace(" ", "_"));
+
+    man.select_chapter();
+    
+    man.read();
+
+}
+
 impl Man {
     fn select_chapter(&mut self) {
         if std::fs::metadata("/tmp/mani").is_err() { std::fs::create_dir_all("/tmp/mani/imgs").unwrap() }
@@ -57,6 +70,7 @@ impl Man {
 
     fn create_cbz(&self) {
         if std::fs::metadata(format!("/tmp/mani/{}-{}.cbz", self.name, self.chapter)).is_err() {
+            println!("{}Downloading chapter {}", "\x1b[32m", self.name);
             let response = get_response(format!("{}/chapter-{}", self.id, self.chapter)).unwrap();
             let page = Html::parse_document(&response);
 
@@ -73,59 +87,6 @@ impl Man {
             zip_files(&self.name, &self.chapter).unwrap();
         }
     }
-}
-
-fn zip_files(name: &str, chapter: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let cbz_file = File::create(format!("/tmp/mani/{}-{}.cbz", name, chapter))?;
-    let mut zip_writer = ZipWriter::new(cbz_file);
-    let images = std::fs::read_dir("/tmp/mani/imgs")?;
-
-
-    let options = FileOptions::default().unix_permissions(0o755); // Set file permissions
-
-    for image in images {
-        let file_path = image?.path();
-
-        if file_path.extension().unwrap() == "jpg" {
-            zip_writer.start_file(file_path.file_name().unwrap().to_str().unwrap(), options)?;
-            let mut jpg_file = std::fs::File::open(&file_path)?;
-            std::io::copy(&mut jpg_file, &mut zip_writer)?;
-            std::fs::remove_file(file_path)?;
-        }
-    }
-
-    Ok(())
-}
-
-#[tokio::main] 
-async fn get_image(url: &str, n: u32) -> Result<(), reqwest::Error> {
-    let client = reqwest::Client::new();
-    let response = client
-        .get(url)
-        .header("Referer", "https://readmanganato.com/")
-        .send()
-        .await?
-        .bytes()
-        .await?;
-
-    File::create(format!("/tmp/mani/imgs/{}.jpg", n)).unwrap()
-        .write_all(&response).unwrap();
-
-    Ok(())
-}
-
-
-pub fn search_manga() {
-    if std::fs::metadata("/tmp/mani").is_err() { std::fs::create_dir_all("/tmp/mani/imgs").unwrap() }
-    let mut query = String::new();
-    println!("{}Search for manga: {}", "\x1b[34m", "\x1b[0m");
-    std::io::stdin().read_line(&mut query).expect("reading stdin");
-    let mut man = select_manga(&query.replace(" ", "_"));
-
-    man.select_chapter();
-    
-    man.read();
-
 }
 
 
@@ -167,7 +128,27 @@ fn select_manga(query: &str) -> Man {
 }
 
 
+fn zip_files(name: &str, chapter: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let cbz_file = File::create(format!("/tmp/mani/{}-{}.cbz", name, chapter))?;
+    let mut zip_writer = ZipWriter::new(cbz_file);
+    let images = std::fs::read_dir("/tmp/mani/imgs")?;
 
+
+    let options = FileOptions::default().unix_permissions(0o755); // Set file permissions
+
+    for image in images {
+        let file_path = image?.path();
+
+        if file_path.extension().unwrap() == "jpg" {
+            zip_writer.start_file(file_path.file_name().unwrap().to_str().unwrap(), options)?;
+            let mut jpg_file = std::fs::File::open(&file_path)?;
+            std::io::copy(&mut jpg_file, &mut zip_writer)?;
+            std::fs::remove_file(file_path)?;
+        }
+    }
+
+    Ok(())
+}
 
 #[tokio::main] 
 async fn get_response(url: String) -> Result<String, reqwest::Error> {
@@ -177,3 +158,21 @@ async fn get_response(url: String) -> Result<String, reqwest::Error> {
        .await?
     )
 }
+
+#[tokio::main] 
+async fn get_image(url: &str, n: u32) -> Result<(), reqwest::Error> {
+    let client = reqwest::Client::new();
+    let response = client
+        .get(url)
+        .header("Referer", "https://readmanganato.com/")
+        .send()
+        .await?
+        .bytes()
+        .await?;
+
+    File::create(format!("/tmp/mani/imgs/{}.jpg", n)).unwrap()
+        .write_all(&response).unwrap();
+
+    Ok(())
+}
+
