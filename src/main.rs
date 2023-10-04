@@ -27,24 +27,23 @@ enum Comms {
 }
 
 fn main() {
-    mov::search_movie()
-    // let args = Mani::parse();
+    let args = Mani::parse();
 
-    // match args {
-    //    Mani { comm: Some(Comms::Ani) } => ani::search_anime(),
-    //    Mani { comm: Some(Comms::Man) } => man::search_manga(),
-    //    Mani { comm: Some(Comms::Mov) } => mov::search_movie(),
-    //    _ => {
-    //         match rust_fzf::select(
-    //         vec![String::from("watch anime"), String::from("read manga"), String::from("watch movie/tv show"), String::from("quit")],
-    //         vec![String::from("--reverse")]
-    //         ).as_str() {
-    //             "watch anime" => ani::search_anime(),
-    //             "read manga" => man::search_manga(),
-    //             "watch movie/tv show" => mov::search_movie(),
-    //             "quit" => return,
-    //             _ => ()
-    //         }
-    //    }
-    // }
+    match args {
+       Mani { comm: Some(Comms::Ani) } => ani::search_anime(),
+       Mani { comm: Some(Comms::Man) } => man::search_manga(),
+       Mani { comm: Some(Comms::Mov) } => mov::search_movie(),
+       _ => {
+            match rust_fzf::select(
+            vec![String::from("watch anime"), String::from("read manga"), String::from("watch movie/tv show"), String::from("quit")],
+            vec![String::from("--reverse")]
+            ).as_str() {
+                "watch anime" => ani::search_anime(),
+                "read manga" => man::search_manga(),
+                "watch movie/tv show" => mov::search_movie(),
+                "quit" => return,
+                _ => ()
+            }
+       }
+    }
 }

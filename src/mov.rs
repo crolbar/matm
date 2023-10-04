@@ -1,6 +1,6 @@
 use scraper::{Html, Selector};
-use mov::Mov;
-mod mov;
+use mov_mod::Mov;
+mod mov_mod;
 
 pub fn search_movie() {
     let mut query = String::new();
@@ -35,8 +35,10 @@ fn select_movie(query: &str) -> Mov {
     let response = get_response(format!("https://flixhq.to/search/{}", query)).unwrap();
 
     let div_sel = Selector::parse("div.film_list-wrap").unwrap();
-    let h2_sel = Selector::parse("h2.film-name").unwrap();
+    let detail_sel = Selector::parse("div.film-detail").unwrap();
     let a_sel = Selector::parse("a").unwrap();
+    let info_sel = Selector::parse("span.fdi-item").unwrap();
+
 
     let search_page = Html::parse_document(&response);
     let search_results = search_page.select(&div_sel);
@@ -45,9 +47,15 @@ fn select_movie(query: &str) -> Mov {
     let mut movie_ids:Vec<&str> = Vec::new();
 
     for result in search_results {
-        for element in result.select(&h2_sel) {
+        for element in result.select(&detail_sel) {
             let a_elem = element.select(&a_sel).next().unwrap().value();
-            name_search_results.push(a_elem.attr("title").unwrap().to_string());
+            let last_info_elem = element.select(&info_sel).last().unwrap().text().collect::<Vec<_>>().join("");
+            name_search_results.push(format!("{} ({}) ({})",
+                a_elem.attr("title").unwrap().to_string(),
+                if last_info_elem.contains("EPS") { last_info_elem } else { element.select(&info_sel).next().unwrap().text().collect::<Vec<_>>().join("") },
+                a_elem.attr("href").unwrap().split("/").skip(1).next().unwrap()
+            ));
+
             movie_ids.push(a_elem.attr("href").unwrap().rsplit_once('-').unwrap().1)
         }
     }
@@ -65,10 +73,36 @@ fn select_movie(query: &str) -> Mov {
     } 
 
 
-    select_episode(
-        select_season(movie_ids[name_search_results.iter().position(|x| x == &name).unwrap()]).as_str(),
-        name
-    )
+    let movie_id = movie_ids[name_search_results.iter().position(|x| x == &name).unwrap()];
+
+    if name.contains("movie") {
+        get_movie_server_id(movie_id, name)
+    } else {
+        select_episode(
+            select_season(movie_id).as_str(),
+            name
+        )
+    }
+}
+
+fn get_movie_server_id(movie_id: &str, name: String) -> Mov {
+    let response = get_response(format!("https://flixhq.to/ajax/movie/episodes/{}", movie_id)).unwrap();
+    let page = Html::parse_document(&response);
+
+    let sel = Selector::parse("a").unwrap();
+
+    let mut id = 0;
+    for i in page.select(&sel) {
+        id = i.value().attr("data-linkid").unwrap().parse::<u32>().unwrap();
+        break
+    }
+
+
+    Mov {
+        ep_ids: vec![id],
+        name: name,
+        ep: 1
+    }
 }
 
 fn select_season(movie_id: &str) -> String {

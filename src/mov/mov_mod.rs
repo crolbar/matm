@@ -44,7 +44,13 @@ impl Mov {
 
 
     fn get_sources(&self) -> Result<Sources, Box<dyn std::error::Error>> {
-        let url = format!("https://flixhq.to/ajax/sources/{}", get_ep_data_id(self.ep_ids[self.ep - 1]));
+        let mut url = "https://flixhq.to/ajax/sources/".to_string();
+        if self.name.contains("movie") {
+            url = format!("{}{}", url, self.ep_ids[self.ep - 1]);
+        } else {
+            url = format!("{}{}", url, get_ep_data_id(self.ep_ids[self.ep - 1]));
+        }
+        
         let provider: Value = serde_json::from_str(get_response(url)?.as_str())?;
         let provider_url = url::Url::parse(provider["link"].as_str().ok_or("Missing 'link' field")?)?;
 
@@ -110,7 +116,7 @@ fn decrypt_url(url: String) -> String {
 
     let decrypted_source = String::from_utf8(output.stdout).expect("Failed to convert to string");
 
-    
+
     if !decrypted_source.starts_with("http") {
         println!("{}Could't decrypt video source url", "\x1b[31m");
         std::process::exit(1)
