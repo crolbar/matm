@@ -1,37 +1,9 @@
+use crate::utils::get_response;
+use crate::mov::mov_mod::Mov;
 use scraper::{Html, Selector};
-use mov_mod::Mov;
-mod mov_mod;
-
-pub fn search_movie() {
-    let mut query = String::new();
-    println!("{}Search for movie/tv show: {}", "\x1b[34m", "\x1b[0m");
-    std::io::stdin().read_line(&mut query).expect("reading stdin");
-    let mut mov = select_movie(&query.replace(" ", "-"));
-
-    loop {
-        mov.play();
-
-        let select = rust_fzf::select(
-            vec!["next".to_string(), "previous".to_string(), "search".to_string(), "quit".to_string()], 
-            vec!["--reverse".to_string(), format!("--header=Current ep - {} of {}", mov.ep, mov.name)]).to_string();
-
-        match select.as_str() {
-            "next" => {mov.ep += 1; if mov.ep >= mov.ep_ids.len() { println!("{}Episode out of bound", "\x1b[31m") } std::process::exit(0)  },
-            "previous" => {mov.ep -= 1; if mov.ep <= 0 { println!("{}Episode out of bound", "\x1b[31m") } std::process::exit(0) },
-            "search" => {
-                let mut query = String::new();
-                println!("{}Search for movie/tv show: {}", "\x1b[34m", "\x1b[0m");
-                std::io::stdin().read_line(&mut query).expect("reading stdin");
-                mov = select_movie(&query.replace(" ", "-"));
-            },
-            "quit" => std::process::exit(0),
-            _ => ()
-        }
-    }
-}
 
 
-fn select_movie(query: &str) -> Mov {
+pub fn select_movie_show(query: &str) -> Mov {
     let response = get_response(format!("https://flixhq.to/search/{}", query)).unwrap();
 
     let div_sel = Selector::parse("div.film_list-wrap").unwrap();
@@ -76,11 +48,15 @@ fn select_movie(query: &str) -> Mov {
     let movie_id = movie_ids[name_search_results.iter().position(|x| x == &name).unwrap()];
 
     if name.contains("movie") {
-        get_movie_server_id(movie_id, name)
-    } else {
-        select_episode(
-            select_season(movie_id).as_str(),
+        get_movie_server_id(
+            movie_id,
             name
+        )
+    } else {
+        let season = select_season(movie_id, name);
+        select_episode(
+            season.0,
+            season.1
         )
     }
 }
@@ -99,13 +75,14 @@ fn get_movie_server_id(movie_id: &str, name: String) -> Mov {
 
 
     Mov {
-        ep_ids: vec![id],
+        ep_ids: Some(vec![id]),
+        season_id: None,
         name: name,
         ep: 1
     }
 }
 
-fn select_season(movie_id: &str) -> String {
+fn select_season(movie_id: &str, name: String) -> (String, String) {
     let response = get_response(format!("https://flixhq.to/ajax/v2/tv/seasons/{}", movie_id)).unwrap();
     let a_sel = Selector::parse("a").unwrap();
     let seasons_page = Html::parse_document(&response);
@@ -121,10 +98,10 @@ fn select_season(movie_id: &str) -> String {
     let season = rust_fzf::select(seasons_all.clone(), vec!["--reverse".to_string()]);
 
 
-    season_ids[seasons_all.iter().position(|s| s == &season).unwrap()].to_string()
+    (season_ids[seasons_all.iter().position(|s| s == &season).unwrap()].to_string(), format!("{} {}", name, season))
 }
 
-fn select_episode(season_id: &str, name: String) -> Mov {
+fn select_episode(season_id: String, name: String) -> Mov {
     let response = get_response(format!("https://flixhq.to/ajax/v2/season/episodes/{}", season_id)).unwrap();
     let episodes_page = Html::parse_document(&response);
     let a_sel = Selector::parse("a").unwrap();
@@ -141,17 +118,21 @@ fn select_episode(season_id: &str, name: String) -> Mov {
 
 
     Mov {
-        ep_ids: all_episode_ids,
+        ep_ids: Some(all_episode_ids),
+        season_id: Some(season_id.parse().unwrap()),
         name: name,
         ep: episode_num
     }
 }
 
-#[tokio::main] 
-async fn get_response(url: String) -> Result<String, reqwest::Error> {
-    Ok(reqwest::get(url)
-       .await?
-       .text()
-       .await?
-    )
+pub fn update_ep_ids(season_id: usize) -> Option<Vec<u32>> {
+    let response = get_response(format!("https://flixhq.to/ajax/v2/season/episodes/{}", season_id)).unwrap();
+    let episodes_page = Html::parse_document(&response);
+    let a_sel = Selector::parse("a").unwrap();
+
+    let mut all_episode_ids: Vec<u32> = Vec::new();
+    for element in episodes_page.select(&a_sel) {
+        all_episode_ids.push(element.value().attr("data-id").unwrap().parse::<u32>().unwrap())
+    }
+    Some(all_episode_ids)
 }

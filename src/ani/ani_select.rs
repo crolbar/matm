@@ -1,38 +1,10 @@
+use crate::utils::get_response;
+use crate::ani::ani_mod::Ani;
 use scraper::{Html, Selector};
 use serde_json::Value;
-use ani_mod::Ani;
-mod ani_mod;
-
-pub fn search_anime() {
-    let mut query = String::new();
-    println!("{}Search for anime: {}", "\x1b[34m", "\x1b[0m");
-    std::io::stdin().read_line(&mut query).expect("reading stdin");
-    let mut ani = select_anime(&query);
-
-    loop {
-        ani.play();
-
-        let select = rust_fzf::select(
-            vec!["next".to_string(), "previous".to_string(), "search".to_string(), "quit".to_string()], 
-            vec!["--reverse".to_string(), format!("--header=Current ep - {} of {}", ani.ep, ani.name)]).to_string();
-
-        match select.as_str() {
-            "next" => {ani.ep += 1; if ani.ep >= ani.ep_ids.len() {println!("{}Episode out of bound", "\x1b[31m"); std::process::exit(0)}},
-            "previous" => {ani.ep -= 1; if ani.ep <= 0 {println!("{}Episode out of bound", "\x1b[31m")}; std::process::exit(0)},
-            "search" => {
-                let mut query = String::new();
-                println!("{}Search for anime: {}", "\x1b[34m", "\x1b[0m");
-                std::io::stdin().read_line(&mut query).expect("reading stdin");
-                ani = select_anime(&query);
-            },
-            "quit" => std::process::exit(0),
-            _ => ()
-        }
-    }
-}
 
 
-fn select_anime(query: &str) -> Ani {
+pub fn select_anime(query: &str) -> Ani {
     let response = get_response(format!("https://aniwatch.to/search?keyword={}", query)).unwrap();
 
     let div_sel = Selector::parse("div.film_list-wrap").unwrap();
@@ -94,22 +66,25 @@ fn select_episode(anime_id: &str, name: String) -> Ani {
 
     let episode_num = rust_fzf::select(
         (1..=episodes_json["totalItems"].as_u64().unwrap()).map(|x| x.to_string()).collect(),
-            vec!["--reverse".to_string()]
+        vec!["--reverse".to_string()]
     ).parse::<usize>().unwrap();
 
 
     Ani {
-        ep_ids: all_episode_ids,
+        ep_ids: Some(all_episode_ids),
         name: name,
-        ep: episode_num
+        ep: episode_num,
+        id: anime_id.parse().unwrap()
     }
 }
 
-#[tokio::main] 
-async fn get_response(url: String) -> Result<String, reqwest::Error> {
-    Ok(reqwest::get(url)
-       .await?
-       .text()
-       .await?
-    )
+
+pub fn update_ep_ids(anime_id: usize) -> Option<Vec<u32>> {
+    let episodes_url = format!("https://aniwatch.to/ajax/v2/episode/list/{}", anime_id);
+    let episodes_json: Value = serde_json::from_str(get_response(episodes_url).unwrap().as_str()).unwrap();
+
+    let episodes_html = Html::parse_document(episodes_json["html"].as_str().unwrap());
+    let ep_sel = Selector::parse("a.ssl-item").unwrap();
+
+    Some(episodes_html.select(&ep_sel).map(|x| x.value().attr("data-id").unwrap().parse::<u32>().unwrap()).collect())
 }

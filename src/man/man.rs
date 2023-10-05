@@ -1,30 +1,18 @@
-use std::fs::File;
-use std::io::Write;
-use scraper::{Html, Selector};
+use crate::utils::get_response;
 use zip::{write::FileOptions, ZipWriter};
+use scraper::{Html, Selector};
+use std::io::Write;
+use std::fs::File;
 
 #[derive(Debug, Clone)]
-struct Man {
+pub struct Man {
     name: String,
     id: String,
     chapter: String
 }
 
-pub fn search_manga() {
-    if std::fs::metadata("/tmp/mani").is_err() { std::fs::create_dir_all("/tmp/mani/imgs").unwrap() }
-    let mut query = String::new();
-    println!("{}Search for manga: {}", "\x1b[34m", "\x1b[0m");
-    std::io::stdin().read_line(&mut query).expect("reading stdin");
-    let mut man = select_manga(&query.replace(" ", "_"));
-
-    man.select_chapter();
-    
-    man.read();
-
-}
-
 impl Man {
-    fn select_chapter(&mut self) {
+    pub fn select_chapter(&mut self) {
         if std::fs::metadata("/tmp/mani").is_err() { std::fs::create_dir_all("/tmp/mani/imgs").unwrap() }
         if std::fs::read_dir("/tmp/mani/imgs").unwrap().count() > 0 {std::fs::remove_dir_all("/tmp/mani/imgs").unwrap(); std::fs::create_dir("/tmp/mani/imgs").unwrap()}
         let response = get_response(self.id.clone()).unwrap();
@@ -60,7 +48,7 @@ impl Man {
         }
     }
 
-    fn read(&self) {
+    pub fn read(&self) {
         self.create_cbz();
 
 
@@ -70,7 +58,7 @@ impl Man {
 
     fn create_cbz(&self) {
         if std::fs::metadata(format!("/tmp/mani/{}-{}.cbz", self.name, self.chapter)).is_err() {
-            println!("{}Downloading chapter {}", "\x1b[32m", self.name);
+            println!("{}Downloading chapter {} of {}", "\x1b[32m", self.chapter, self.name);
             let response = get_response(format!("{}/chapter-{}", self.id, self.chapter)).unwrap();
             let page = Html::parse_document(&response);
 
@@ -90,7 +78,7 @@ impl Man {
 }
 
 
-fn select_manga(query: &str) -> Man {
+pub fn select_manga(query: &str) -> Man {
     let url = format!("https://manganato.com/search/story/{}", query);
     let response = get_response(url).unwrap();
 
@@ -124,6 +112,8 @@ fn select_manga(query: &str) -> Man {
 
     if selected_name.is_empty() {std::process::exit(0)}
 
+    dbg!(&search_results[1].id);
+
     search_results.iter().find(|i| i.name == selected_name).cloned().unwrap()
 }
 
@@ -151,15 +141,6 @@ fn zip_files(name: &str, chapter: &str) -> Result<(), Box<dyn std::error::Error>
 }
 
 #[tokio::main] 
-async fn get_response(url: String) -> Result<String, reqwest::Error> {
-    Ok(reqwest::get(url)
-       .await?
-       .text()
-       .await?
-    )
-}
-
-#[tokio::main] 
 async fn get_image(url: &str, n: u32) -> Result<(), reqwest::Error> {
     let client = reqwest::Client::new();
     let response = client
@@ -170,9 +151,8 @@ async fn get_image(url: &str, n: u32) -> Result<(), reqwest::Error> {
         .bytes()
         .await?;
 
-    File::create(format!("/tmp/mani/imgs/{}.jpg", n)).unwrap()
+    std::fs::File::create(format!("/tmp/mani/imgs/{}.jpg", n)).unwrap()
         .write_all(&response).unwrap();
 
     Ok(())
 }
-
