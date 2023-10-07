@@ -15,7 +15,7 @@ impl Man {
     pub fn select_chapter(&mut self) {
         if std::fs::metadata("/tmp/mani").is_err() { std::fs::create_dir_all("/tmp/mani/imgs").unwrap() }
         if std::fs::read_dir("/tmp/mani/imgs").unwrap().count() > 0 {std::fs::remove_dir_all("/tmp/mani/imgs").unwrap(); std::fs::create_dir("/tmp/mani/imgs").unwrap()}
-        let response = get_response(self.id.clone()).unwrap();
+        let response = get_response(&self.id).unwrap();
         let page = Html::parse_document(&response);
 
         let li_sel = Selector::parse("li.a-h").unwrap();
@@ -59,7 +59,7 @@ impl Man {
     fn create_cbz(&self) {
         if std::fs::metadata(format!("/tmp/mani/{}-{}.cbz", self.name, self.chapter)).is_err() {
             println!("{}Downloading chapter {} of {}", "\x1b[32m", self.chapter, self.name);
-            let response = get_response(format!("{}/chapter-{}", self.id, self.chapter)).unwrap();
+            let response = get_response(&format!("{}/chapter-{}", self.id, self.chapter)).unwrap();
             let page = Html::parse_document(&response);
 
             let div_sel = Selector::parse("div.container-chapter-reader").unwrap();
@@ -80,7 +80,7 @@ impl Man {
 
 pub fn select_manga(query: &str) -> Man {
     let url = format!("https://manganato.com/search/story/{}", query);
-    let response = get_response(url).unwrap();
+    let response = get_response(&url).unwrap();
 
     let div_sel = Selector::parse("div.search-story-item").unwrap();
     let h3_sel = Selector::parse("h3").unwrap();

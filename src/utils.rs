@@ -4,7 +4,7 @@ pub struct Sources {
 }
 
 #[tokio::main] 
-pub async fn get_response(url: String) -> Result<String, reqwest::Error> {
+pub async fn get_response(url: &str) -> Result<String, reqwest::Error> {
     Ok(reqwest::get(url)
        .await?
        .text()
@@ -39,7 +39,7 @@ pub fn decrypt_url(url: String, key: Vec<Vec<u32>>) -> String {
     let enc_url_without_key: String = enc_url.iter().filter(|&&c| !c.is_whitespace()).collect();
 
     let cmd = format!(
-        "echo {} | base64 -d | openssl enc -aes-256-cbc -d -md md5 -k {} 2>/dev/null | sed -nE 's_.*\"file\":\"([^\"]*)\".*_\\1_p'",
+        "echo {} | base64 -d | openssl enc -aes-256-cbc -d -md md5 -k {} | sed -nE 's_.*\"file\":\"([^\"]*)\".*_\\1_p'",
         enc_url_without_key, extracted_key
     );
 

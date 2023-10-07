@@ -19,12 +19,20 @@ enum Comms {
     #[clap(alias = "a")]
     Ani {
         /// Select ep from history
-        #[clap(short)]
+        #[clap(name = "continue", short, long)]
         c: bool,
 
         /// Delte history
-        #[clap(short)]
-        d: bool
+        #[clap(short, long)]
+        delete: bool,
+
+        /// Select the provider after you have selected the episode (if not selected it defalts to the first one)
+        #[clap(short, long)]
+        select_provider: bool,
+
+        /// Watch dubbed
+        #[clap(long)]
+        dub: bool,
     },
     
     /// Read manga (ma for short)
@@ -35,12 +43,16 @@ enum Comms {
     #[clap(alias = "m")]
     Mov {
         /// Select ep from history
-        #[clap(short)]
+        #[clap(name = "continue", short, long)]
         c: bool,
 
         /// Delte history
-        #[clap(short)]
-        d: bool
+        #[clap(short, long)]
+        delete: bool,
+
+        /// Use vlc instead of mpv (not recommended)
+        #[clap(short, long)]
+        vlc: bool
     },
 }
 
@@ -48,21 +60,33 @@ fn main() {
     let args = Mani::parse();
 
     match args {
-       Mani { comm: Some(Comms::Ani { c: false, d: true }) } => ani::delete_hist(),
-       Mani { comm: Some(Comms::Ani { c: true, d: false }) } => ani::select_from_hist(),
-       Mani { comm: Some(Comms::Ani { c: false, d: false}) } => ani::search_anime(),
-       Mani { comm: Some(Comms::Man) } => man::search_manga(),
-       Mani { comm: Some(Comms::Mov { c: false, d: true }) } => mov::delete_hist(),
-       Mani { comm: Some(Comms::Mov { c: true, d: false }) } => mov::select_from_hist(),
-       Mani { comm: Some(Comms::Mov { c: false, d: false}) } => mov::search_movie_show(),
+        Mani { comm: Some(comm) } => {
+            match comm {
+
+                Comms::Ani { c, delete, select_provider, dub } => {
+                    if delete { ani::delete_hist() }
+                    else if c { ani::select_from_hist(select_provider, dub) }
+                    else { ani::search_anime(select_provider, dub) }
+                }
+
+                Comms::Man => man::search_manga(),
+
+                Comms::Mov { c, delete, vlc } => {
+                    if delete {  mov::delete_hist() }
+                    else if c { mov::select_from_hist(vlc) }
+                    else { mov::search_movie_show(vlc) }
+                }
+            }
+        },
+    
        _ => {
             match rust_fzf::select(
             vec![String::from("watch anime"), String::from("read manga"), String::from("watch movie/tv show"), String::from("quit")],
             vec![String::from("--reverse")]
             ).as_str() {
-                "watch anime" => ani::search_anime(),
+                "watch anime" => ani::search_anime(false, false),
                 "read manga" => man::search_manga(),
-                "watch movie/tv show" => mov::search_movie_show(),
+                "watch movie/tv show" => mov::search_movie_show(false),
                 "quit" => return,
                 _ => ()
             }

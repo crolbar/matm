@@ -4,7 +4,7 @@ use scraper::{Html, Selector};
 
 
 pub fn select_movie_show(query: &str) -> Mov {
-    let response = get_response(format!("https://flixhq.to/search/{}", query)).unwrap();
+    let response = get_response(&format!("https://flixhq.to/search/{}", query)).unwrap();
 
     let div_sel = Selector::parse("div.film_list-wrap").unwrap();
     let detail_sel = Selector::parse("div.film-detail").unwrap();
@@ -62,7 +62,7 @@ pub fn select_movie_show(query: &str) -> Mov {
 }
 
 fn get_movie_server_id(movie_id: &str, name: String) -> Mov {
-    let response = get_response(format!("https://flixhq.to/ajax/movie/episodes/{}", movie_id)).unwrap();
+    let response = get_response(&format!("https://flixhq.to/ajax/movie/episodes/{}", movie_id)).unwrap();
     let page = Html::parse_document(&response);
 
     let sel = Selector::parse("a").unwrap();
@@ -83,7 +83,7 @@ fn get_movie_server_id(movie_id: &str, name: String) -> Mov {
 }
 
 fn select_season(movie_id: &str, name: String) -> (String, String) {
-    let response = get_response(format!("https://flixhq.to/ajax/v2/tv/seasons/{}", movie_id)).unwrap();
+    let response = get_response(&format!("https://flixhq.to/ajax/v2/tv/seasons/{}", movie_id)).unwrap();
     let a_sel = Selector::parse("a").unwrap();
     let seasons_page = Html::parse_document(&response);
 
@@ -102,7 +102,7 @@ fn select_season(movie_id: &str, name: String) -> (String, String) {
 }
 
 fn select_episode(season_id: String, name: String) -> Mov {
-    let response = get_response(format!("https://flixhq.to/ajax/v2/season/episodes/{}", season_id)).unwrap();
+    let response = get_response(&format!("https://flixhq.to/ajax/v2/season/episodes/{}", season_id)).unwrap();
     let episodes_page = Html::parse_document(&response);
     let a_sel = Selector::parse("a").unwrap();
 
@@ -126,7 +126,7 @@ fn select_episode(season_id: String, name: String) -> Mov {
 }
 
 pub fn update_ep_ids(season_id: usize) -> Option<Vec<u32>> {
-    let response = get_response(format!("https://flixhq.to/ajax/v2/season/episodes/{}", season_id)).unwrap();
+    let response = get_response(&format!("https://flixhq.to/ajax/v2/season/episodes/{}", season_id)).unwrap();
     let episodes_page = Html::parse_document(&response);
     let a_sel = Selector::parse("a").unwrap();
 

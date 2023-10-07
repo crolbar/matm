@@ -4,16 +4,16 @@ use mov_mod::Mov;
 pub mod mov_mod;
 mod mov_select;
 
-pub fn search_movie_show() {
+pub fn search_movie_show(vlc: bool) {
     let mut query = String::new();
     println!("{}Search for movie/tv show: {}", "\x1b[34m", "\x1b[0m");
     std::io::stdin().read_line(&mut query).expect("reading stdin");
     let mut mov = select_movie_show(&query.replace(" ", "-"));
 
-    main_loop(&mut mov)
+    main_loop(&mut mov, vlc)
 }
 
-pub fn select_from_hist() {
+pub fn select_from_hist(vlc: bool) {
     let hist = Hist::deserialize();
     let name = rust_fzf::select(
         hist.mov_data.iter().map(|x| format!("{} Episode {}", x.name, x.ep)).collect(),
@@ -23,13 +23,13 @@ pub fn select_from_hist() {
     let mut mov = hist.mov_data[hist.mov_data.iter().position(|x| x.name == name).unwrap()].clone();
     mov.ep_ids = update_ep_ids(mov.season_id.unwrap());
 
-    main_loop(&mut mov);
+    main_loop(&mut mov, vlc);
 }
 
 
-fn main_loop(mov: &mut Mov) {
+fn main_loop(mov: &mut Mov, vlc: bool) {
     loop {
-        mov.play();
+        mov.play(vlc);
 
         match mov.ep + 1 > mov.ep_ids.clone().unwrap().len() {
             true => {
@@ -42,7 +42,7 @@ fn main_loop(mov: &mut Mov) {
 
         if mov.name.contains("(movie)") {
             let select = rust_fzf::select(
-                vec!["search".to_string(), "quit".to_string()], 
+                vec!["search".to_string(), "replay".to_string(), "quit".to_string()], 
                 vec!["--reverse".to_string(), format!("--header={}", mov.name)]).to_string();
 
             match select.as_str() {
@@ -52,6 +52,7 @@ fn main_loop(mov: &mut Mov) {
                     std::io::stdin().read_line(&mut query).expect("reading stdin");
                     *mov = select_movie_show(&query.replace(" ", "-"));
                 },
+                "replay" => (),
                 "quit" => std::process::exit(0),
                 _ => ()
             }

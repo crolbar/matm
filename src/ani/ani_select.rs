@@ -5,7 +5,7 @@ use serde_json::Value;
 
 
 pub fn select_anime(query: &str) -> Ani {
-    let response = get_response(format!("https://aniwatch.to/search?keyword={}", query)).unwrap();
+    let response = get_response(&format!("https://aniwatch.to/search?keyword={}", query)).unwrap();
 
     let div_sel = Selector::parse("div.film_list-wrap").unwrap();
     let h3_sel = Selector::parse("h3.film-name").unwrap();
@@ -51,7 +51,7 @@ pub fn select_anime(query: &str) -> Ani {
 
 fn select_episode(anime_id: &str, name: String) -> Ani {
     let episodes_url = format!("https://aniwatch.to/ajax/v2/episode/list/{}", anime_id);
-    let episodes_json: Value = serde_json::from_str(get_response(episodes_url).unwrap().as_str()).unwrap();
+    let episodes_json: Value = serde_json::from_str(get_response(&episodes_url).unwrap().as_str()).unwrap();
 
     let episodes_html = Html::parse_document(episodes_json["html"].as_str().unwrap());
     let ep_sel = Selector::parse("a.ssl-item").unwrap();
@@ -67,7 +67,7 @@ fn select_episode(anime_id: &str, name: String) -> Ani {
     let episode_num = rust_fzf::select(
         (1..=episodes_json["totalItems"].as_u64().unwrap()).map(|x| x.to_string()).collect(),
         vec!["--reverse".to_string()]
-    ).parse::<usize>().unwrap();
+    ).parse::<usize>().unwrap_or_else(|_| {println!("{}Exiting...", "\x1b[33m"); std::process::exit(0)});
 
 
     Ani {
@@ -81,7 +81,7 @@ fn select_episode(anime_id: &str, name: String) -> Ani {
 
 pub fn update_ep_ids(anime_id: usize) -> Option<Vec<u32>> {
     let episodes_url = format!("https://aniwatch.to/ajax/v2/episode/list/{}", anime_id);
-    let episodes_json: Value = serde_json::from_str(get_response(episodes_url).unwrap().as_str()).unwrap();
+    let episodes_json: Value = serde_json::from_str(get_response(&episodes_url).unwrap().as_str()).unwrap();
 
     let episodes_html = Html::parse_document(episodes_json["html"].as_str().unwrap());
     let ep_sel = Selector::parse("a.ssl-item").unwrap();

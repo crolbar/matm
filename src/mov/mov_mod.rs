@@ -13,36 +13,44 @@ pub struct Mov {
 }
 
 impl Mov {
-    pub fn play(&mut self) {
+    pub fn play(&mut self, vlc: bool) {
         match self.get_sources() {
             Ok(sources) => {
                 let mut title = format!("{} Episode: {}", self.name, self.ep);
                 if self.name.contains("(movie)") { title = format!("{}", self.name.split_once("(movie)").unwrap().0); println!("{}Playing: {}", "\x1b[32m", title) } else { title = title.split("(tv) ").collect::<String>(); println!("{}Playing: {}", "\x1b[32m", title) }
-
-                if sources.subs.is_empty() {
-                    println!("{}Could't find subtitles", "\x1b[31m");
-                    Command::new("mpv")
-                        .args([
-                            sources.video,
-                            format!("--sub-file={}",sources.subs),
-                            format!("--force-media-title={}", title),
-                            String::from("--fs")
-                        ])
-                        .spawn().expect("crashed when trying to start mpv")
-                        .wait().unwrap();
+                if vlc {
+                    Command::new("vlc")
+                            .args([
+                                sources.video,
+                                format!("--meta-title={}", title)
+                            ])
+                            .spawn().expect("crashed when trying to start vlc")
+                            .wait().unwrap();
                 } else {
-                    Command::new("mpv")
-                        .args([
-                            sources.video,
-                            format!("--sub-file={}",sources.subs),
-                            format!("--force-media-title={}", title),
-                            String::from("--fs")
-                        ])
-                        .spawn().expect("crashed when trying to start mpv")
-                        .wait().unwrap();
+                    if sources.subs.is_empty() {
+                        println!("{}Could't find subtitles", "\x1b[31m");
+                        Command::new("mpv")
+                            .args([
+                                sources.video,
+                                format!("--sub-file={}",sources.subs),
+                                format!("--force-media-title={}", title),
+                                String::from("--fs")
+                            ])
+                            .spawn().expect("crashed when trying to start mpv")
+                            .wait().unwrap();
+                    } else {
+                        Command::new("mpv")
+                            .args([
+                                sources.video,
+                                format!("--sub-file={}",sources.subs),
+                                format!("--force-media-title={}", title),
+                                String::from("--fs")
+                            ])
+                            .spawn().expect("crashed when trying to start mpv")
+                            .wait().unwrap();
+                    }
                 }
             }
-            
             Err(e) => {
                 println!("{}Error while trying to get sources: {}", "\x2b[31m", e);
                 std::process::exit(1) 
@@ -58,7 +66,7 @@ impl Mov {
             url = format!("{}{}", url, get_ep_data_id(self.ep_ids.clone().unwrap()[self.ep - 1]))
         }
         
-        let provider: Value = serde_json::from_str(get_response(url)?.as_str())?;
+        let provider: Value = serde_json::from_str(get_response(&url)?.as_str())?;
         let provider_url = url::Url::parse(provider["link"].as_str().ok_or("Missing 'link' field")?)?;
 
         let url = format!("https://{}/ajax/embed-4/getSources?id={}",
@@ -81,7 +89,7 @@ impl Mov {
             })
         } else {
             let enc_video_url = sources_json["sources"].as_str().ok_or("Missing 'sources' field")?.to_string();
-            let key: Vec<Vec<u32>> = serde_json::from_str(&get_response(String::from("https://raw.githubusercontent.com/enimax-anime/key/e4/key.txt"))
+            let key: Vec<Vec<u32>> = serde_json::from_str(&get_response(&String::from("https://raw.githubusercontent.com/enimax-anime/key/e4/key.txt"))
                 .expect("couldnt get key")).expect("couldnt deserialize string to vec");
             Ok(Sources {
                 video: decrypt_url(enc_video_url, key),
@@ -93,7 +101,7 @@ impl Mov {
 
 
 fn get_ep_data_id(ep_id: u32) -> u32 {
-    let req = scraper::Html::parse_document(&get_response(format!("https://flixhq.to/ajax/v2/episode/servers/{}", ep_id)).unwrap());
+    let req = scraper::Html::parse_document(&get_response(&format!("https://flixhq.to/ajax/v2/episode/servers/{}", ep_id)).unwrap());
     let a_sel = Selector::parse("a").unwrap();
     req.select(&a_sel).next().unwrap().value().attr("data-id").unwrap().parse::<u32>().unwrap() 
 }
