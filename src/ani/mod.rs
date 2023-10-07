@@ -53,7 +53,8 @@ fn main_loop(ani: &mut Ani, select_provider: bool, is_dub: bool) {
                 String::from("search"),
                 String::from("quit")
             ], 
-            vec![String::from("--reverse"), format!("--header=Current ep - {} of {}", ani.ep, ani.name)]);
+            vec![String::from("--reverse"), format!("--header=Current ep - {} of {}", ani.ep, ani.name)]
+        );
 
         match select.as_str() {
             "next" => {ani.ep += 1; if ani.ep > ani.ep_ids.clone().unwrap().len() {println!("{}Episode out of bound", "\x1b[31m"); std::process::exit(0) } },
@@ -68,7 +69,7 @@ fn main_loop(ani: &mut Ani, select_provider: bool, is_dub: bool) {
             "switch to sub" => is_dub = false,
             "switch to dub" => is_dub = true,
             "change provider"  => {
-                provider_index = get_provider_index(select_provider, &ep_id, is_dub);
+                provider_index = get_provider_index(true, &ep_id, is_dub);
             },
             "search" => {
                 let mut query = String::new();
@@ -83,17 +84,17 @@ fn main_loop(ani: &mut Ani, select_provider: bool, is_dub: bool) {
 }
 
 pub fn delete_hist() {
-    let mut creared = Hist::deserialize();
-    creared.ani_data.clear();
-    creared.serialize();
+    let mut hist = Hist::deserialize();
+    hist.ani_data.clear();
+    hist.serialize();
     println!("{}History deleted", "\x1b[34m")
 }
 
 fn get_provider_index(select_provider: bool, ep_id: &u32, is_dub: bool) -> usize {
     if select_provider {
-    rust_fzf::select(
-        (1..=ani_mod::get_ep_data_id(ep_id, is_dub).len()).map(|x| x.to_string()).collect(),
-        vec![String::from("--reverse"), "--header=Change the provider server. (usualy the last ones don't work) (if you havent changed it it defaults to the first)".to_string()]
-    ).parse::<usize>().unwrap_or_else(|_| { println!("{}Exiting...", "\x1b[33m"); std::process::exit(0) }) - 1
+        rust_fzf::select(
+            (1..=ani_mod::get_ep_data_id(ep_id, is_dub).len()).map(|x| x.to_string()).collect(),
+            vec![String::from("--reverse"), "--header=Change the provider server. (usualy the last ones don't work) (if you havent changed it it defaults to the first)".to_string()]
+        ).parse::<usize>().unwrap_or_else(|_| { println!("{}Exiting...", "\x1b[33m"); std::process::exit(0) }) - 1
     } else { 0 }
 }

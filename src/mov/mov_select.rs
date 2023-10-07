@@ -25,7 +25,7 @@ pub fn select_movie_show(query: &str) -> Mov {
             name_search_results.push(format!("{} ({}) ({})",
                 a_elem.attr("title").unwrap().to_string(),
                 if last_info_elem.contains("EPS") { last_info_elem } else { element.select(&info_sel).next().unwrap().text().collect::<Vec<_>>().join("") },
-                a_elem.attr("href").unwrap().split("/").skip(1).next().unwrap()
+                a_elem.attr("href").unwrap().split("/").skip(1).next().unwrap() // CHANGE THIS !! how we diff movie from tv show
             ));
 
             movie_ids.push(a_elem.attr("href").unwrap().rsplit_once('-').unwrap().1)
@@ -67,15 +67,12 @@ fn get_movie_server_id(movie_id: &str, name: String) -> Mov {
 
     let sel = Selector::parse("a").unwrap();
 
-    let mut id = 0;
-    for i in page.select(&sel) {
-        id = i.value().attr("data-linkid").unwrap().parse::<u32>().unwrap();
-        break
-    }
+
+    let server_ids: Vec<String> = page.select(&sel).map(|x| x.value().attr("data-linkid").unwrap().to_string()).collect();
 
 
     Mov {
-        ep_ids: Some(vec![id]),
+        ep_ids: Some(server_ids),
         season_id: None,
         name: name,
         ep: 1
@@ -106,10 +103,7 @@ fn select_episode(season_id: String, name: String) -> Mov {
     let episodes_page = Html::parse_document(&response);
     let a_sel = Selector::parse("a").unwrap();
 
-    let mut all_episode_ids: Vec<u32> = Vec::new();
-    for element in episodes_page.select(&a_sel) {
-        all_episode_ids.push(element.value().attr("data-id").unwrap().parse::<u32>().unwrap())
-    }
+    let all_episode_ids: Vec<String> = episodes_page.select(&a_sel).map(|x| x.value().attr("data-id").unwrap().to_string()).collect();
 
     let episode_num = rust_fzf::select(
         (1..=all_episode_ids.len()).map(|x| x.to_string()).collect(),
@@ -125,14 +119,10 @@ fn select_episode(season_id: String, name: String) -> Mov {
     }
 }
 
-pub fn update_ep_ids(season_id: usize) -> Option<Vec<u32>> {
+pub fn update_ep_ids(season_id: usize) -> Option<Vec<String>> {
     let response = get_response(&format!("https://flixhq.to/ajax/v2/season/episodes/{}", season_id)).unwrap();
     let episodes_page = Html::parse_document(&response);
     let a_sel = Selector::parse("a").unwrap();
 
-    let mut all_episode_ids: Vec<u32> = Vec::new();
-    for element in episodes_page.select(&a_sel) {
-        all_episode_ids.push(element.value().attr("data-id").unwrap().parse::<u32>().unwrap())
-    }
-    Some(all_episode_ids)
+    Some(episodes_page.select(&a_sel).map(|x| x.value().attr("data-id").unwrap().to_string()).collect())
 }

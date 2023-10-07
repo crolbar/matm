@@ -12,8 +12,6 @@ pub async fn get_response(url: &str) -> Result<String, reqwest::Error> {
     )
 }
 
-
-
 #[tokio::main] 
 pub async fn get_sources_response(url: &str,) -> Result<String, reqwest::Error> {
     let client = reqwest::Client::new();
@@ -47,7 +45,7 @@ pub fn decrypt_url(url: String, key: Vec<Vec<u32>>) -> String {
         .arg("-c")
         .arg(cmd)
         .output()
-        .expect("Failed to execute command");
+        .expect("Failed to decrypt url");
 
     let decrypted_source = String::from_utf8(output.stdout).expect("Failed to convert to string");
 

@@ -26,7 +26,7 @@ enum Comms {
         #[clap(short, long)]
         delete: bool,
 
-        /// Select the provider after you have selected the episode (if not selected it defalts to the first one)
+        /// Select the provider after you have selected the episode (if not selected it defaults to the first one)
         #[clap(short, long)]
         select_provider: bool,
 
@@ -50,6 +50,10 @@ enum Comms {
         #[clap(short, long)]
         delete: bool,
 
+        /// Select the provider after you have selected the episode/movie (if not selected it defaults to the first one)
+        #[clap(short, long)]
+        select_provider: bool,
+
         /// Use vlc instead of mpv (not recommended)
         #[clap(short, long)]
         vlc: bool
@@ -62,7 +66,6 @@ fn main() {
     match args {
         Mani { comm: Some(comm) } => {
             match comm {
-
                 Comms::Ani { c, delete, select_provider, dub } => {
                     if delete { ani::delete_hist() }
                     else if c { ani::select_from_hist(select_provider, dub) }
@@ -71,10 +74,10 @@ fn main() {
 
                 Comms::Man => man::search_manga(),
 
-                Comms::Mov { c, delete, vlc } => {
+                Comms::Mov { c, delete, select_provider, vlc } => {
                     if delete {  mov::delete_hist() }
-                    else if c { mov::select_from_hist(vlc) }
-                    else { mov::search_movie_show(vlc) }
+                    else if c { mov::select_from_hist(select_provider, vlc) }
+                    else { mov::search_movie_show(select_provider, vlc) }
                 }
             }
         },
@@ -86,7 +89,7 @@ fn main() {
             ).as_str() {
                 "watch anime" => ani::search_anime(false, false),
                 "read manga" => man::search_manga(),
-                "watch movie/tv show" => mov::search_movie_show(false),
+                "watch movie/tv show" => mov::search_movie_show(false, false),
                 "quit" => return,
                 _ => ()
             }
