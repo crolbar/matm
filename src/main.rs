@@ -1,64 +1,11 @@
+use crate::hist::{Hist, DataType};
+use utils::{Mani, Comms};
 use clap::Parser;
 mod utils;
 mod hist;
 mod man;
 mod mov;
 mod ani;
-
-/// mani
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Mani {
-    #[command(subcommand)]
-    comm: Option<Comms>
-}
-
-#[derive(clap::Subcommand, Debug)]
-enum Comms {
-    /// Watch anime (a for short)
-    #[clap(alias = "a")]
-    Ani {
-        /// Select ep from history
-        #[clap(name = "continue", short, long)]
-        c: bool,
-
-        /// Delte history
-        #[clap(short, long)]
-        delete: bool,
-
-        /// Select the provider after you have selected the episode (if not selected it defaults to the first one)
-        #[clap(short, long)]
-        select_provider: bool,
-
-        /// Watch dubbed
-        #[clap(long)]
-        dub: bool,
-    },
-    
-    /// Read manga (ma for short)
-    #[clap(alias = "ma")]
-    Man,
-
-    /// Watch movie/show (m for short)
-    #[clap(alias = "m")]
-    Mov {
-        /// Select ep from history
-        #[clap(name = "continue", short, long)]
-        c: bool,
-
-        /// Delte history
-        #[clap(short, long)]
-        delete: bool,
-
-        /// Select the provider after you have selected the episode/movie (if not selected it defaults to the first one)
-        #[clap(short, long)]
-        select_provider: bool,
-
-        /// Use vlc instead of mpv (not recommended)
-        #[clap(short, long)]
-        vlc: bool
-    },
-}
 
 fn main() {
     let args = Mani::parse();
@@ -67,21 +14,25 @@ fn main() {
         Mani { comm: Some(comm) } => {
             match comm {
                 Comms::Ani { c, delete, select_provider, dub } => {
-                    if delete { ani::delete_hist() }
+                    if delete { Hist::delete_hist(DataType::AniData) }
                     else if c { ani::select_from_hist(select_provider, dub) }
                     else { ani::search_anime(select_provider, dub) }
                 }
 
-                Comms::Man => man::search_manga(),
+                Comms::Man {c, delete, clean } =>{
+                    if clean {man::delete_cache()}
+                    else if delete { Hist::delete_hist(DataType::ManData) }
+                    else if c { man::select_from_hist()} 
+                    else { man::search_manga() }
+                }
 
                 Comms::Mov { c, delete, select_provider, vlc } => {
-                    if delete {  mov::delete_hist() }
+                    if delete {  Hist::delete_hist(DataType::MovData) }
                     else if c { mov::select_from_hist(select_provider, vlc) }
                     else { mov::search_movie_show(select_provider, vlc) }
                 }
             }
         },
-    
        _ => {
             match rust_fzf::select(
             vec![String::from("watch anime"), String::from("read manga"), String::from("watch movie/tv show"), String::from("quit")],

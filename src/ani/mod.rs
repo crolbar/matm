@@ -1,5 +1,5 @@
 use ani_select::{select_anime, update_ep_ids};
-use crate::hist::Hist;
+use crate::hist::{Hist, DataType};
 use ani_mod::Ani;
 mod ani_select;
 pub mod ani_mod;
@@ -37,7 +37,7 @@ fn main_loop(ani: &mut Ani, select_provider: bool, is_dub: bool) {
         match ani.ep + 1 > ani.ep_ids.clone().unwrap().len() {
             true => {
                 if Hist::deserialize().ani_data.iter().position(|x| x.name == ani.name) != None {
-                    Hist::remove(&ani.name, true);
+                    Hist::remove(&ani.name, DataType::AniData);
                 }
             },
             false => Hist::ani_save(ani.clone())
@@ -81,13 +81,6 @@ fn main_loop(ani: &mut Ani, select_provider: bool, is_dub: bool) {
             _ => ()
         }
     }
-}
-
-pub fn delete_hist() {
-    let mut hist = Hist::deserialize();
-    hist.ani_data.clear();
-    hist.serialize();
-    println!("{}History deleted", "\x1b[34m")
 }
 
 fn get_provider_index(select_provider: bool, ep_id: &u32, is_dub: bool) -> usize {

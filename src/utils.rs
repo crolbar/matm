@@ -1,3 +1,71 @@
+use clap::Parser;
+
+/// mani
+#[derive(Parser, Debug)]
+pub struct Mani {
+    #[command(subcommand)]
+    pub comm: Option<Comms>
+}
+
+#[derive(clap::Subcommand, Debug)]
+pub enum Comms {
+    /// Watch anime (a for short)
+    #[clap(alias = "a")]
+    Ani {
+        /// Select ep from history
+        #[clap(name = "continue", short, long)]
+        c: bool,
+
+        /// Delete history
+        #[clap(short, long)]
+        delete: bool,
+
+        /// Select the provider after you have selected the episode (if not selected it defaults to the first one)
+        #[clap(short, long)]
+        select_provider: bool,
+
+        /// Watch dubbed
+        #[clap(long)]
+        dub: bool,
+    },
+    
+    /// Read manga (ma for short)
+    #[clap(alias = "ma")]
+    Man {
+        /// Select ep from history
+        #[clap(name = "continue", short, long)]
+        c: bool,
+
+        /// Delete history
+        #[clap(short, long)]
+        delete: bool,
+
+        /// Delete cache
+        #[clap(long)]
+        clean: bool,
+    },
+
+    /// Watch movie/show (m for short)
+    #[clap(alias = "m")]
+    Mov {
+        /// Select ep from history
+        #[clap(name = "continue", short, long)]
+        c: bool,
+
+        /// Delete history
+        #[clap(short, long)]
+        delete: bool,
+
+        /// Select the provider after you have selected the episode/movie (if not selected it defaults to the first one)
+        #[clap(short, long)]
+        select_provider: bool,
+
+        /// Use vlc instead of mpv (not recommended)
+        #[clap(short, long)]
+        vlc: bool
+    },
+}
+
 pub struct Sources {
     pub video: String,
     pub subs: String
@@ -56,4 +124,3 @@ pub fn decrypt_url(url: String, key: Vec<Vec<u32>>) -> String {
 
     decrypted_source
 }
-

@@ -1,13 +1,21 @@
 use serde::{Deserialize, Serialize};
 use crate::ani::ani_mod::Ani;
 use crate::mov::mov_mod::Mov;
+use crate::man::man_mod::Man;
 use std::io::BufReader;
 use std::fs::File;
+
+pub enum DataType {
+    AniData,
+    MovData,
+    ManData
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Hist {
     pub ani_data: Vec<Ani>,
-    pub mov_data: Vec<Mov>
+    pub mov_data: Vec<Mov>,
+    pub man_data: Vec<Man>
 
 }
 
@@ -33,6 +41,18 @@ impl Hist {
         hist.serialize()
     }
 
+    pub fn man_save(man: Man) {
+        let mut hist = Hist::deserialize();
+
+        let man = Man { all_chapters: vec![], chapter: man.all_chapters[man.all_chapters.iter().position(|x| x == &man.chapter).unwrap() + 1].clone(), ..man };
+        match hist.man_data.iter().position(|x| x.name == man.name) {
+            Some(pos) => hist.man_data[pos].chapter = man.chapter,
+            None => hist.man_data.push(man) 
+        }
+
+        hist.serialize()
+    }
+
     pub fn mov_save(mov: Mov) {
         let mut hist = Hist::deserialize();
 
@@ -45,11 +65,12 @@ impl Hist {
         hist.serialize()
     }
 
-    pub fn remove(name: &str, is_ani: bool) {
+    pub fn remove(name: &str, dt: DataType) {
         let mut hist = Hist::deserialize();
-        match is_ani {
-            true => { hist.ani_data.remove(hist.ani_data.iter().position(|x| x.name == name).unwrap()); },
-            false => { hist.mov_data.remove(hist.mov_data.iter().position(|x| x.name == name).unwrap()); },
+        match dt {
+            DataType::AniData => { hist.ani_data.remove(hist.ani_data.iter().position(|x| x.name == name).unwrap()); },
+            DataType::MovData => { hist.mov_data.remove(hist.mov_data.iter().position(|x| x.name == name).unwrap()); },
+            DataType::ManData => { hist.man_data.remove(hist.man_data.iter().position(|x| x.name == name).unwrap()); },
         }
         hist.serialize()
     }
@@ -61,7 +82,7 @@ impl Hist {
         if File::open(&file_path).is_err() {
             if !dir_path.exists() { std::fs::create_dir_all(&dir_path).unwrap() }
             File::create(&file_path).unwrap();
-            Hist { ani_data: vec![], mov_data: vec![] }.serialize()
+            Hist { ani_data: vec![], mov_data: vec![], man_data: vec![] }.serialize()
         }
 
         match is_ser {
@@ -69,4 +90,16 @@ impl Hist {
             false => File::open(&file_path).unwrap()
         }
     }
+
+    pub fn delete_hist(dt: DataType) {
+        let mut hist = Hist::deserialize();
+        match dt {
+            DataType::AniData => hist.ani_data.clear(),
+            DataType::MovData => hist.mov_data.clear(),
+            DataType::ManData => hist.man_data.clear(),
+        }
+        hist.serialize();
+        println!("{}History deleted", "\x1b[34m")
+    }
+
 }

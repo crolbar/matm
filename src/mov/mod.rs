@@ -1,5 +1,5 @@
 use mov_select::{select_movie_show, update_ep_ids};
-use crate::hist::Hist;
+use crate::hist::{Hist, DataType};
 use mov_mod::Mov;
 pub mod mov_mod;
 mod mov_select;
@@ -38,7 +38,7 @@ fn main_loop(mov: &mut Mov, select_provider: bool, vlc: bool) {
             match mov.ep + 1 > mov.ep_ids.clone().unwrap().len() {
                 true => {
                     if Hist::deserialize().mov_data.iter().position(|x| x.name == mov.name) != None {
-                        Hist::remove(&mov.name, false);
+                        Hist::remove(&mov.name, DataType::MovData);
                     }
                 },
                 false => Hist::mov_save(mov.clone())
@@ -100,13 +100,6 @@ fn main_loop(mov: &mut Mov, select_provider: bool, vlc: bool) {
             }
         }
     }
-}
-
-pub fn delete_hist() {
-    let mut hist = Hist::deserialize();
-    hist.mov_data.clear();
-    hist.serialize();
-    println!("{}History deleted", "\x1b[34m")
 }
 
 fn get_provider_index(select_provider: bool, ep_id: &str, mov: Mov) -> usize {
