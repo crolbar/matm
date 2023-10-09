@@ -1,5 +1,5 @@
 use crate::hist::{Hist, DataType};
-use utils::{Mani, Comms};
+use utils::{Matm, Comms};
 use clap::Parser;
 mod utils;
 mod hist;
@@ -8,10 +8,10 @@ mod mov;
 mod ani;
 
 fn main() {
-    let args = Mani::parse();
+    let args = Matm::parse();
 
     match args {
-        Mani { comm: Some(comm) } => {
+        Matm { comm: Some(comm) } => {
             match comm {
                 Comms::Ani { c, delete, select_provider, dub } => {
                     if delete { Hist::delete_hist(DataType::AniData) }

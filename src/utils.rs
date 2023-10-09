@@ -1,8 +1,8 @@
 use clap::Parser;
 
-/// mani
+/// matm 
 #[derive(Parser, Debug)]
-pub struct Mani {
+pub struct Matm {
     #[command(subcommand)]
     pub comm: Option<Comms>
 }
