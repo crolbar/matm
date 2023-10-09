@@ -1,11 +1,10 @@
 use serde::{Deserialize, Serialize};
+use futures::{stream, StreamExt};
 use crate::utils::get_response;
 use scraper::{Html, Selector};
-use std::sync::{Arc, Mutex};
 use zip::write::FileOptions;
-use rayon::prelude::*;
-use zip::ZipWriter;
 use std::io::Write;
+use zip::ZipWriter;
 use std::fs::File;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -51,11 +50,10 @@ impl Man {
         all_chapters
     }
 
-
     pub fn create_cbz(&self) {
         if std::fs::metadata(dirs::home_dir().unwrap().join(format!(".cache/mani/{}-{}.cbz", self.name, self.chapter))).is_err() {
             println!("{}Downloading chapter {} of {}", "\x1b[32m", self.chapter, self.name);
-            let response = get_response(&format!("{}/chapter-{}", self.url_id, self.chapter)).unwrap();
+            let response = get_response(&format!("https://chapmanganato.com/{}/chapter-{}", self.url_id.rsplit_once("/").unwrap().1, self.chapter)).unwrap();
             let page = Html::parse_document(&response);
 
             let div_sel = Selector::parse("div.container-chapter-reader").unwrap();
@@ -68,38 +66,42 @@ impl Man {
                     i.value().attr("src").unwrap().to_string()
                 ).collect::<Vec<_>>();
 
-
             
-            let zip_writer = Arc::new(Mutex::new(
-                ZipWriter::new(
-                    File::create(dirs::home_dir().unwrap().join(".cache/mani/false.cbz")).unwrap()
-                )
-            ));
+            get_imgs(img_urls);
             
-            rayon::ThreadPoolBuilder::new().num_threads(img_urls.len()).build().unwrap();
-            img_urls
-            .par_iter()
-            .enumerate()
-            .for_each(|(n, url)| {
-                // println!("{}Downloading image: {}","\x1b[90m", n);
-                    zip_image(url.to_string(), zip_writer.clone(), n + 10);
-
-                println!("{}Downloaded image: {}{}","\x1b[90m", n, "\x1b[0m")
-            });
             std::fs::rename(dirs::home_dir().unwrap().join(".cache/mani/false.cbz"), format!(".cache/mani/{}-{}.cbz", self.name, self.chapter)).unwrap();
         }
     }
 }
 
 #[tokio::main]
-async fn zip_image(url: String, zip_writer: Arc<Mutex<ZipWriter<File>>>, n: usize)  {
-    let mut zip_writer = zip_writer.lock().unwrap();
-    zip_writer.start_file(format!("{}.jpg", n), FileOptions::default().compression_method(zip::CompressionMethod::Stored)).unwrap();
-    
-    zip_writer.write_all(&reqwest::Client::new()
-        .get(url)
-        .header("Referer","https://readmanganato.com/")
-        .send().await.unwrap()
-        .bytes().await.unwrap()
-    ).unwrap();
+async fn get_imgs(img_urls: Vec<String>) {
+    let client = reqwest::Client::new();
+
+    let zip_writer = std::sync::Arc::new(std::sync::Mutex::new(
+        ZipWriter::new(
+            File::create(dirs::home_dir().unwrap().join(".cache/mani/false.cbz")).unwrap()
+        )
+    ));
+
+    let imgs = stream::iter(img_urls).map(|url| {
+        let client = client.clone();
+            tokio::spawn(async move {
+                client.get(url)
+                    .header("Referer","https://readmanganato.com/")
+                    .send().await.unwrap()
+                    .bytes().await.unwrap()
+            })
+    });
+
+    imgs.enumerate().for_each(|(n, img)|{
+        let zip_writer = zip_writer.clone();
+        async move {
+            let mut zip_writer = zip_writer.lock().unwrap();
+            zip_writer.start_file(format!("{}.jpg", n + 10), FileOptions::default().compression_method(zip::CompressionMethod::Stored)).unwrap();
+            
+            zip_writer.write_all(&img.await.unwrap()).unwrap();
+            println!("{}Downloaded image: {}{}","\x1b[90m", n, "\x1b[0m");
+        }
+    }).await
 }

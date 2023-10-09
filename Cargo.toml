@@ -7,11 +7,11 @@ edition = "2021"
 tokio = { version = "1", features = ["full"] }
 serde = {version = "1", features = ["derive"]}
 clap = { version = "4.4", features = ["derive"] }
+futures = "0.3.28"
 serde_json = "1.0"
 rust_fzf = "0.1"
 reqwest = "0.11"
 scraper = "0.17"
-rayon = "1.8"
 ron = "0.8"
 url = "2.4"
 zip = "0.6"
