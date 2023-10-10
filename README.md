@@ -38,12 +38,6 @@ cargo build --release
 ```
 
 
-You can remove the cloned repo if you want
-
-```
-cd ..
-rm -rf matm
-```
 
 ### Running
 The binary is in `target/release` so you can:
@@ -60,6 +54,11 @@ chmod +x matm
 Then you can cp the binary into your $PATH
 ```
 sudo cp matm /usr/bin
+```
+You can remove the cloned repo if you want
+```
+cd ..
+rm -rf matm
 ```
 
 # Dependencies
