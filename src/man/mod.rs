@@ -28,8 +28,8 @@ pub fn select_from_hist() {
 
 
 fn main_loop(man: &mut Man) {
-    if std::fs::metadata(dirs::home_dir().unwrap().join(".cache/mani")).is_err() { std::fs::create_dir_all(dirs::home_dir().unwrap().join(".cache/mani")).unwrap() }
-    if std::fs::metadata(dirs::home_dir().unwrap().join(".cache/mani/false.cbz")).is_ok() { std::fs::remove_file(dirs::home_dir().unwrap().join(".cache/mani/false.cbz")).unwrap() }
+    if std::fs::metadata(dirs::home_dir().unwrap().join(".cache/matm")).is_err() { std::fs::create_dir_all(dirs::home_dir().unwrap().join(".cache/matm")).unwrap() }
+    if std::fs::metadata(dirs::home_dir().unwrap().join(".cache/matm/false.cbz")).is_ok() { std::fs::remove_file(dirs::home_dir().unwrap().join(".cache/matm/false.cbz")).unwrap() }
     loop {
         man.read();
         let current_chapter_index = man.all_chapters.iter().position(|x| x == &man.chapter).unwrap();
@@ -63,7 +63,7 @@ fn main_loop(man: &mut Man) {
                 };
                 man.chapter = man.all_chapters[current_chapter_index + 1].clone()
             },
-            "reload" => std::fs::remove_file(dirs::home_dir().unwrap().join(format!(".cache/mani/{}-{}.cbz", man.name, man.chapter))).unwrap(),
+            "reload" => std::fs::remove_file(dirs::home_dir().unwrap().join(format!(".cache/matm/{}-{}.cbz", man.name, man.chapter))).unwrap(),
             "previous" => {
                 if man.chapter <= 0.0 { 
                     println!("{}Episode out of bound", "\x1b[31m");
@@ -84,7 +84,7 @@ fn main_loop(man: &mut Man) {
 }
 
 pub fn delete_cache() {
-    std::fs::remove_dir_all(dirs::home_dir().unwrap().join(".cache/mani")).unwrap();
-    std::fs::create_dir(dirs::home_dir().unwrap().join(".cache/mani")).unwrap();
+    std::fs::remove_dir_all(dirs::home_dir().unwrap().join(".cache/matm")).unwrap();
+    std::fs::create_dir(dirs::home_dir().unwrap().join(".cache/matm")).unwrap();
     println!("{}Cache cleared", "\x1b[34m")
 }

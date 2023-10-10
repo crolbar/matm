@@ -22,7 +22,7 @@ impl Man {
 
         std::process::Command::new("zathura")
             .args([
-                dirs::home_dir().unwrap().join(format!(".cache/mani/{}-{}.cbz", self.name, self.chapter)).to_str().unwrap(),
+                dirs::home_dir().unwrap().join(format!(".cache/matm/{}-{}.cbz", self.name, self.chapter)).to_str().unwrap(),
                "--mode=fullscreen"
             ])
         .spawn().unwrap();
@@ -51,7 +51,7 @@ impl Man {
     }
 
     pub fn create_cbz(&self) {
-        if std::fs::metadata(dirs::home_dir().unwrap().join(format!(".cache/mani/{}-{}.cbz", self.name, self.chapter))).is_err() {
+        if std::fs::metadata(dirs::home_dir().unwrap().join(format!(".cache/matm/{}-{}.cbz", self.name, self.chapter))).is_err() {
             println!("{}Downloading chapter {} of {}", "\x1b[32m", self.chapter, self.name);
             let response = get_response(&format!("https://chapmanganato.com/{}/chapter-{}", self.url_id.rsplit_once("/").unwrap().1, self.chapter)).unwrap();
             let page = Html::parse_document(&response);
@@ -69,7 +69,7 @@ impl Man {
             
             get_imgs(img_urls);
             
-            std::fs::rename(dirs::home_dir().unwrap().join(".cache/mani/false.cbz"), format!(".cache/mani/{}-{}.cbz", self.name, self.chapter)).unwrap();
+            std::fs::rename(dirs::home_dir().unwrap().join(".cache/matm/false.cbz"), format!(".cache/matm/{}-{}.cbz", self.name, self.chapter)).unwrap();
         }
     }
 }
@@ -80,7 +80,7 @@ async fn get_imgs(img_urls: Vec<String>) {
 
     let zip_writer = std::sync::Arc::new(std::sync::Mutex::new(
         ZipWriter::new(
-            File::create(dirs::home_dir().unwrap().join(".cache/mani/false.cbz")).unwrap()
+            File::create(dirs::home_dir().unwrap().join(".cache/matm/false.cbz")).unwrap()
         )
     ));
 

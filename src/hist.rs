@@ -76,7 +76,7 @@ impl Hist {
     }
 
     fn get_file(is_ser: bool) -> File {
-        let dir_path = dirs::home_dir().unwrap().join(".local/state/mani");
+        let dir_path = dirs::home_dir().unwrap().join(".local/state/matm");
         let file_path = dir_path.join("hist.ron");
 
         if File::open(&file_path).is_err() {
