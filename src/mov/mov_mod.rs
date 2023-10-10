@@ -12,6 +12,7 @@ pub struct Mov {
     pub ep: usize
 }
 
+
 impl Mov {
     pub fn play(&mut self, provider_index: usize ,vlc: bool) {
         match self.get_sources(provider_index) {
@@ -32,7 +33,6 @@ impl Mov {
                         Command::new("mpv")
                             .args([
                                 sources.video,
-                                format!("--sub-file={}",sources.subs),
                                 format!("--force-media-title={}", title),
                                 String::from("--fs")
                             ])
