@@ -70,6 +70,7 @@ rm -rf matm
 - `git`
 - `cargo`
 
+### AUR packages:
 ```
 yay -S --needed mpv zathura-cb fzf git cargo
 ```
@@ -143,7 +144,7 @@ matm ma --help
 </details>
 
 # Uninstall
-### Aur
+### AUR
 ```
 yay -R matm-git
 ```
