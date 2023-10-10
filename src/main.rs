@@ -33,6 +33,7 @@ fn main() {
                 }
             }
         },
+       
        _ => {
             match rust_fzf::select(
             vec![String::from("watch anime"), String::from("read manga"), String::from("watch movie/tv show"), String::from("quit")],
