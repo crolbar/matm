@@ -57,7 +57,7 @@ sudo cp matm /usr/bin
 ```
 You can remove the cloned repo if you want
 ```
-cd ..
+cd ../../..
 rm -rf matm
 ```
 
