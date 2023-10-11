@@ -117,7 +117,6 @@ pub fn decrypt_url(url: String, key: Vec<Vec<u32>>) -> String {
 
     let decrypted_source = String::from_utf8(output.stdout).expect("Failed to convert to string");
 
-    dbg!(&decrypted_source);
     if !decrypted_source.starts_with("http") {
         println!("{}Could't decrypt video source url", "\x1b[31m");
         std::process::exit(1)
