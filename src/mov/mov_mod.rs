@@ -107,3 +107,11 @@ pub fn get_ep_data_id(ep_id: &str) -> Vec<String> {
     let a_sel = Selector::parse("a").unwrap();
     req.select(&a_sel).map(|x| x.value().attr("data-id").unwrap().to_string()).collect()
 }
+
+pub fn update_ep_ids(season_id: usize) -> Option<Vec<String>> {
+    let response = get_response(&format!("https://flixhq.to/ajax/v2/season/episodes/{}", season_id)).unwrap();
+    let episodes_page = scraper::Html::parse_document(&response);
+    let a_sel = Selector::parse("a").unwrap();
+
+    Some(episodes_page.select(&a_sel).map(|x| x.value().attr("data-id").unwrap().to_string()).collect())
+}

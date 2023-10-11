@@ -67,7 +67,6 @@ fn get_movie_server_id(movie_id: &str, name: String) -> Mov {
 
     let sel = Selector::parse("a").unwrap();
 
-
     let server_ids: Vec<String> = page.select(&sel).map(|x| x.value().attr("data-linkid").unwrap().to_string()).collect();
 
 
@@ -108,8 +107,11 @@ fn select_episode(season_id: String, name: String) -> Mov {
     let episode_num = rust_fzf::select(
         (1..=all_episode_ids.len()).map(|x| x.to_string()).collect(),
         vec!["--reverse".to_string()]
-    ).parse::<usize>().unwrap();
-
+    ).parse::<usize>()
+    .unwrap_or_else(|_|{
+        println!("{}Exiting...", "\x1b[33m");
+        std::process::exit(0)
+    });
 
     Mov {
         ep_ids: Some(all_episode_ids),
@@ -117,12 +119,4 @@ fn select_episode(season_id: String, name: String) -> Mov {
         name: name,
         ep: episode_num
     }
-}
-
-pub fn update_ep_ids(season_id: usize) -> Option<Vec<String>> {
-    let response = get_response(&format!("https://flixhq.to/ajax/v2/season/episodes/{}", season_id)).unwrap();
-    let episodes_page = Html::parse_document(&response);
-    let a_sel = Selector::parse("a").unwrap();
-
-    Some(episodes_page.select(&a_sel).map(|x| x.value().attr("data-id").unwrap().to_string()).collect())
 }

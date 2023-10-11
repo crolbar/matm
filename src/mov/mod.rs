@@ -1,6 +1,6 @@
-use mov_select::{select_movie_show, update_ep_ids};
+use mov_select::select_movie_show;
 use crate::hist::{Hist, DataType};
-use mov_mod::Mov;
+use mov_mod::{Mov, update_ep_ids};
 pub mod mov_mod;
 mod mov_select;
 
@@ -112,7 +112,7 @@ fn get_provider_index(select_provider: bool, ep_id: &str, mov: Mov) -> usize {
         if select_provider {
             rust_fzf::select(
                 range,
-                vec![String::from("--reverse"), "--header=Change the provider server. (usualy the last ones don't work) (if you havent changed it it defaults to the first)".to_string()]
+                vec![String::from("--reverse"), String::from("--header=Change the provider server. (usualy the last ones don't work) (if you havent changed it it defaults to the first)")]
             ).parse::<usize>().unwrap_or_else(|_| { println!("{}Exiting...", "\x1b[33m"); std::process::exit(0) }) - 1
         } else { 0 }
     } else { 0 }
