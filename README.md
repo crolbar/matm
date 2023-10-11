@@ -16,13 +16,13 @@ A tool to watch anime, movies, tv shows and read manga from the comfort of the t
 ### You are at your own risk when using this tool!
 
 ## Linux
-There are no binary installations avaliable yet.
 
-#### Arch
-Build and install from the AUR:
+### Arch
+Install from the AUR:
 ```
-yay -S matm-git
+yay -S matm-bin
 ```
+also there is a git version `matm-git`
 
 ## Windows
 no
