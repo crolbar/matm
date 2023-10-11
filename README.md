@@ -146,8 +146,10 @@ matm ma --help
 # Uninstall
 ### AUR
 ```
-yay -R matm-git
+yay -R matm-bin
 ```
+or if you are using the git version `matm-git`
+
 
 ### Manual
 you can just remove the binary file
