@@ -16,7 +16,7 @@ pub fn search_manga() {
 pub fn select_from_hist() {
     let hist = Hist::deserialize();
     let name = rust_fzf::select(
-        hist.man_data.iter().map(|x| format!("{} Episode {}", x.name, x.chapter)).collect(),
+        hist.man_data.iter().map(|x| format!("{} Chapter: {}", x.name, x.chapter)).collect(),
         vec![String::from("--reverse")]
     ).split_once(" Episode").unwrap_or_else(|| { println!("{}Exiting...", "\x1b[33m"); std::process::exit(0) })
         .0.to_string();
