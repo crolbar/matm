@@ -18,7 +18,7 @@ pub fn select_from_hist() {
     let name = rust_fzf::select(
         hist.man_data.iter().map(|x| format!("{} Chapter: {}", x.name, x.chapter)).collect(),
         vec![String::from("--reverse")]
-    ).split_once(" Episode").unwrap_or_else(|| { println!("{}Exiting...", "\x1b[33m"); std::process::exit(0) })
+    ).split_once(" Chapter").unwrap_or_else(|| { println!("{}Exiting...", "\x1b[33m"); std::process::exit(0) })
         .0.to_string();
     let mut man = hist.man_data[hist.man_data.iter().position(|x| x.name == name).unwrap()].clone();
     man.all_chapters = Man::get_all_chapters(&man.url_id);
