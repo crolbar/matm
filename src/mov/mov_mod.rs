@@ -68,8 +68,9 @@ impl Mov {
         let provider: Value = serde_json::from_str(get_response(&url)?.as_str())?;
         let provider_url = url::Url::parse(provider["link"].as_str().ok_or("Missing 'link' field")?)?;
 
-        let url = format!("https://{}/ajax/embed-4/getSources?id={}",
+        let url = format!("https://{}/ajax/embed-{}/getSources?id={}",
             provider_url.host_str().unwrap(),
+            provider_url.path().split_once("embed-").unwrap().1.chars().next().unwrap(),
             provider_url.path().rsplit('/').next().unwrap()
         );
         let response = get_sources_response(&url)?;
@@ -88,7 +89,8 @@ impl Mov {
         let video_source = if sources_json["encrypted"].as_bool().unwrap() {
             let enc_video_url = sources_json["sources"].as_str().unwrap().to_string();
 
-            let key: Vec<Vec<u32>> = serde_json::from_str(&get_response("https://raw.githubusercontent.com/enimax-anime/key/e4/key.txt")
+            let url = format!("https://raw.githubusercontent.com/enimax-anime/key/e{}/key.txt", provider_url.path().split_once("embed-").unwrap().1.chars().next().unwrap());
+            let key: Vec<Vec<u32>> = serde_json::from_str(&get_response(&url)
                 .expect("couldnt get key")).expect("couldnt deserialize string to vec");
 
             decrypt_url(enc_video_url, key)

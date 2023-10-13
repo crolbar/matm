@@ -101,5 +101,4 @@ impl Hist {
         hist.serialize();
         println!("{}History deleted", "\x1b[34m")
     }
-
 }

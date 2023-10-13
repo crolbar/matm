@@ -23,9 +23,9 @@ pub fn select_movie_show(query: &str) -> Mov {
             let a_elem = element.select(&a_sel).next().unwrap().value();
             let last_info_elem = element.select(&info_sel).last().unwrap().text().collect::<Vec<_>>().join("");
             name_search_results.push(format!("{} ({}) ({})",
-                a_elem.attr("title").unwrap().to_string(),
+                a_elem.attr("title").unwrap(),
                 if last_info_elem.contains("EPS") { last_info_elem } else { element.select(&info_sel).next().unwrap().text().collect::<Vec<_>>().join("") },
-                a_elem.attr("href").unwrap().split("/").skip(1).next().unwrap() // CHANGE THIS !! how we diff movie from tv show
+                if a_elem.attr("href").unwrap().contains("/movie/") {"movie"} else if a_elem.attr("href").unwrap().contains("/tv/") {"tv"} else {"unkown"}
             ));
 
             movie_ids.push(a_elem.attr("href").unwrap().rsplit_once('-').unwrap().1)
