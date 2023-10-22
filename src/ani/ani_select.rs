@@ -1,55 +1,63 @@
 use crate::utils::get_response;
 use crate::ani::ani_mod::Ani;
+use std::collections::HashMap;
 use scraper::{Html, Selector};
 use serde_json::Value;
 
 
 pub fn select_anime(query: &str) -> Ani {
-    let response = get_response(&format!("https://aniwatch.to/search?keyword={}", query)).unwrap();
-
     let div_sel = Selector::parse("div.film_list-wrap").unwrap();
-    let h3_sel = Selector::parse("h3.film-name").unwrap();
     let link_sel = Selector::parse("a.dynamic-name").unwrap();
 
-    let search_page = Html::parse_document(response.as_str());
-    let search_results = search_page.select(&div_sel);
+    let mut anime_result: HashMap<String, String>= HashMap::new();
 
-    let mut name_search_results:Vec<String> = Vec::new();
-    let mut anime_ids:Vec<&str> = Vec::new();
+    let mut page_num = 1;
+    while page_num < 5 { 
+        let response = get_response(&format!("https://aniwatch.to/search?keyword={}&page={}", query, page_num)).unwrap();
 
-    for result in search_results {
-        for element in result.select(&h3_sel) {
-            name_search_results.push(element.text().collect::<Vec<_>>().join(""));
+        let search_page = Html::parse_document(response.as_str());
+        let search_results = search_page.select(&div_sel).next().unwrap();
 
-            for link in element.select(&link_sel) {
-                anime_ids.push(link.value().attr("href").unwrap()
-                   .split('-').last().unwrap()
-                   .split_once('?').unwrap().0);
-            }
+        let elem_iter = search_results.clone().select(&link_sel);
+        if elem_iter.clone().count() == 0 { break }
+
+        for element in elem_iter {
+            anime_result.insert(
+                element.text().collect::<Vec<_>>().join(""),
+
+                element.value().attr("href").unwrap()
+                    .split('-').last().unwrap()
+                    .split_once('?').unwrap().0.to_string()     
+            );
         }
+
+        page_num += 1;
     }
 
-
-    if name_search_results.is_empty() {
+    if anime_result.is_empty() {
         println!("{}No results found", "\x1b[31m");
         std::process::exit(0)
     }
 
-    let name = rust_fzf::select(name_search_results.clone(), vec!["--reverse".to_string()]);
-
-    if name.is_empty() {
-        println!("{}Exiting...", "\x1b[33m");
-        std::process::exit(0)
-    } 
+    let name = match rust_fzf::select(
+        anime_result.iter().map(|x| x.0.to_string()).collect(),
+        vec!["--reverse".to_string()],
+    ) {
+        name if name.is_empty() => {
+            println!("{}Exiting...", "\x1b[33m");
+            std::process::exit(0);
+        }
+        name => name
+    };
 
     select_episode(
-        anime_ids[name_search_results.iter().position(|x| x == &name).unwrap()],
+        anime_result.get(&name).unwrap().to_string(),
         name
     )
 }
 
 
-fn select_episode(anime_id: &str, name: String) -> Ani {
+fn select_episode(anime_id: String, name: String) -> Ani {
     let episodes_url = format!("https://aniwatch.to/ajax/v2/episode/list/{}", anime_id);
     let episodes_json: Value = serde_json::from_str(get_response(&episodes_url).unwrap().as_str()).unwrap();
 
