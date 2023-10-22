@@ -6,8 +6,10 @@ mod man_select;
 
 pub fn search_manga() {
     let mut query = String::new();
-    println!("{}Search for manga: {}", "\x1b[34m", "\x1b[0m");
-    std::io::stdin().read_line(&mut query).expect("reading stdin");
+    while query.trim().is_empty() {
+        println!("{}Search for manga: {}", "\x1b[34m", "\x1b[0m");
+        std::io::stdin().read_line(&mut query).expect("reading stdin");
+    }
     let mut man: Man = select_manga(&query.replace(" ", "_"));
     
     main_loop(&mut man)

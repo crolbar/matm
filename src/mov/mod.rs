@@ -6,8 +6,10 @@ mod mov_select;
 
 pub fn search_movie_show(select_provider: bool, vlc: bool) {
     let mut query = String::new();
-    println!("{}Search for movie/tv show: {}", "\x1b[34m", "\x1b[0m");
-    std::io::stdin().read_line(&mut query).expect("reading stdin");
+    while query.trim().is_empty() {
+        println!("{}Search for movie/tv show: {}", "\x1b[34m", "\x1b[0m");
+        std::io::stdin().read_line(&mut query).expect("reading stdin");
+    }
     let mut mov = select_movie_show(&query.replace(" ", "-"));
 
     main_loop(&mut mov, select_provider, vlc)

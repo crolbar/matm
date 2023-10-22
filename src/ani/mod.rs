@@ -6,10 +6,11 @@ pub mod ani_mod;
 
 pub fn search_anime(select_provider: bool, is_dub: bool) {
     let mut query = String::new();
-    println!("{}Search for anime: {}", "\x1b[34m", "\x1b[0m");
-    std::io::stdin().read_line(&mut query).expect("reading stdin");
+    while query.trim().is_empty() {
+        println!("{}Search for anime: {}", "\x1b[34m", "\x1b[0m");
+        std::io::stdin().read_line(&mut query).expect("reading stdin");
+    }
     let mut ani = select_anime(&query);
-
     main_loop(&mut ani, select_provider, is_dub);
 }
 
