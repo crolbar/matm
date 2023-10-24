@@ -65,7 +65,7 @@ fn main_loop(ani: &mut Ani, select_provider: bool, is_dub: bool) {
                 ani.ep = rust_fzf::select(
                     (1..=ani.ep_ids.clone().unwrap().len()).map(|x| x.to_string()).collect(),
                     vec!["--reverse".to_string()]
-                ).parse().unwrap()
+                ).parse().unwrap_or_else(|_| { println!("{}Exiting...", "\x1b[33m"); std::process::exit(0) })
             },
             "switch to sub" => is_dub = false,
             "switch to dub" => is_dub = true,
