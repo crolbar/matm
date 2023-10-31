@@ -29,7 +29,7 @@ impl Man {
     }
 
     pub fn get_all_chapters(url_id: &str) -> Vec<f32> {
-        let response = get_response(url_id).unwrap();
+        let response = get_response(url_id).unwrap_or_else(|_| { println!("{}No internet connection", "\x1b[33m"); std::process::exit(0) });
         let page = Html::parse_document(&response);
 
         let li_sel = Selector::parse("li.a-h").unwrap();

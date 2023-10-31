@@ -13,7 +13,7 @@ pub fn select_anime(query: &str) -> Ani {
 
     let mut page_num = 1;
     while page_num < 5 { 
-        let response = get_response(&format!("https://aniwatch.to/search?keyword={}&page={}", query, page_num)).unwrap();
+        let response = get_response(&format!("https://aniwatch.to/search?keyword={}&page={}", query, page_num)).unwrap_or_else(|_| { println!("{}No internet connection", "\x1b[33m"); std::process::exit(0) });
 
         let search_page = Html::parse_document(response.as_str());
         let search_results = search_page.select(&div_sel).next().unwrap();
@@ -86,10 +86,9 @@ fn select_episode(anime_id: String, name: String) -> Ani {
     }
 }
 
-
 pub fn update_ep_ids(anime_id: usize) -> Option<Vec<u32>> {
     let episodes_url = format!("https://aniwatch.to/ajax/v2/episode/list/{}", anime_id);
-    let episodes_json: Value = serde_json::from_str(get_response(&episodes_url).unwrap().as_str()).unwrap();
+    let episodes_json: Value = serde_json::from_str(get_response(&episodes_url).unwrap_or_else(|_| { println!("{}No internet connection", "\x1b[33m"); std::process::exit(0) }).as_str()).unwrap();
 
     let episodes_html = Html::parse_document(episodes_json["html"].as_str().unwrap());
     let ep_sel = Selector::parse("a.ssl-item").unwrap();

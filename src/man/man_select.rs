@@ -4,7 +4,7 @@ use scraper::{Html, Selector};
 
 pub fn select_manga(query: &str) -> Man {
     let url = format!("https://manganato.com/search/story/{}", query);
-    let response = get_response(&url).unwrap();
+    let response = get_response(&url).unwrap_or_else(|_| { println!("{}No internet connection", "\x1b[33m"); std::process::exit(0) });
 
     let div_sel = Selector::parse("div.search-story-item").unwrap();
     let h3_sel = Selector::parse("h3").unwrap();

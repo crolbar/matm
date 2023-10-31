@@ -111,7 +111,7 @@ pub fn get_ep_data_id(ep_id: &str) -> Vec<String> {
 }
 
 pub fn update_ep_ids(season_id: usize) -> Option<Vec<String>> {
-    let response = get_response(&format!("https://flixhq.to/ajax/v2/season/episodes/{}", season_id)).unwrap();
+    let response = get_response(&format!("https://flixhq.to/ajax/v2/season/episodes/{}", season_id)).unwrap_or_else(|_| { println!("{}No internet connection", "\x1b[33m"); std::process::exit(0) });
     let episodes_page = scraper::Html::parse_document(&response);
     let a_sel = Selector::parse("a").unwrap();
 

@@ -4,7 +4,7 @@ use scraper::{Html, Selector};
 
 
 pub fn select_movie_show(query: &str) -> Mov {
-    let response = get_response(&format!("https://flixhq.to/search/{}", query)).unwrap();
+    let response = get_response(&format!("https://flixhq.to/search/{}", query)).unwrap_or_else(|_| { println!("{}No internet connection", "\x1b[33m"); std::process::exit(0) });
 
     let div_sel = Selector::parse("div.film_list-wrap").unwrap();
     let detail_sel = Selector::parse("div.film-detail").unwrap();
