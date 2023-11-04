@@ -9,7 +9,7 @@ mod ani;
 
 fn main() {
     let args = Matm::parse();
-
+    
     match args {
         Matm { comm: Some(comm) } => {
             match comm {
