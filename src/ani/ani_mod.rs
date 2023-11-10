@@ -80,7 +80,8 @@ fn get_sources(data_id: &str) -> Result<Sources, Box<dyn std::error::Error>> {
     let video_source = if sources_json["encrypted"].as_bool().unwrap() {
         let enc_video_url = sources_json["sources"].as_str().unwrap().to_string();
 
-        let key: Vec<Vec<u32>> = serde_json::from_str(&get_response("https://raw.githubusercontent.com/enimax-anime/key/e6/key.txt")
+        let url = format!("https://raw.githubusercontent.com/theonlymo/keys/e{}/key", provider_url.path().split_once("embed-").unwrap().1.chars().next().unwrap());
+        let key: Vec<Vec<u32>> = serde_json::from_str(&get_response(&url)
             .expect("couldnt get key")).expect("couldnt deserialize string to vec");
 
         decrypt_url(enc_video_url, key)
