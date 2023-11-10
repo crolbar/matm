@@ -96,22 +96,13 @@ pub fn decrypt_url(url: String, key: Vec<Vec<u32>>) -> String {
     let mut extracted_key = String::new();
     let mut enc_url: Vec<char> = url.chars().collect();
      
-    let init_key = key.clone();
-    let mut key = key.clone();
     let mut sum = 0;
-    for (i, v) in init_key.iter().enumerate() {
-        for (i2, &c) in v.iter().enumerate() {
-            match i2 {
-                0 => {
-                   key[i][i2] = c + sum;
-                },
-                1 => {
-                    sum += c;
-                    key[i][i2] = init_key[i][0] + sum;
-                },
-                _ => ()
-            }
-        }
+    let mut key = key;
+    let init_key = key.clone();
+    for (i, _) in init_key.iter().enumerate() {
+        key[i][0] = init_key[i][0] + sum;
+        sum += init_key[i][1];
+        key[i][1] = init_key[i][0] + sum;
     }    
 
     for i in key {
