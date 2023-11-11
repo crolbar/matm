@@ -18,11 +18,11 @@ A tool to watch anime, movies, tv shows and read manga from the comfort of the t
 ## Linux
 
 ### Arch
-Install from the AUR:
+Install from the AUR
 ```
 yay -S matm-bin
 ```
-also there is a git version `matm-git`
+if the release dosnt work there is a git version `matm-git`
 
 ## Windows
 no
