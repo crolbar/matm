@@ -95,7 +95,6 @@ pub async fn get_sources_response(url: &str,) -> Result<String, reqwest::Error> 
 pub fn decrypt_url(url: String, key: Vec<Vec<u32>>) -> String {
     let mut extracted_key = String::new();
     let mut enc_url: Vec<char> = url.chars().collect();
-    println!("{:?}", key);
      
     for i in key {
         for j in i[0]..i[1] {
