@@ -84,6 +84,15 @@ fn get_sources(data_id: &str) -> Result<Sources, Box<dyn std::error::Error>> {
         let key: Vec<Vec<u32>> = serde_json::from_str(&get_response(&url)
             .expect("couldnt get key")).expect("couldnt deserialize string to vec");
 
+        let mut sum = 0;
+        let mut key = key;
+        let init_key = key.clone();
+        for (i, _) in init_key.iter().enumerate() {
+            key[i][0] = init_key[i][0] + sum;
+            sum += init_key[i][1];
+            key[i][1] = init_key[i][0] + sum;
+        }    
+
         decrypt_url(enc_video_url, key)
     } else { sources_json["sources"].as_array().unwrap()[0].as_object().unwrap()["file"].as_str().unwrap().to_string() };
 
