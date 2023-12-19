@@ -1,5 +1,3 @@
-.vscode
 /target
 TODO.md
-matm-git
-matm-bin
+Makefile.toml
