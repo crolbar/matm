@@ -97,7 +97,16 @@ fn get_sources(data_id: &str) -> Result<Sources, Box<dyn std::error::Error>> {
 pub fn get_ep_data_id(ep_id: &u32, is_dub: bool) -> Vec<String> {
     let video_type = if is_dub {"dub"} else {"sub"};
     let response = get_response(&format!("https://aniwatch.to/ajax/v2/episode/servers?episodeId={}", ep_id)).unwrap();
-    response.split(format!("data-type=\\\"{}\\\" data-id=\\\"", video_type).as_str()).skip(1)
-        .map(|x| x.split_once("\\\"\\n").unwrap().0.to_string())
-        .collect()
+    let provider_list: Vec<String> =
+        response.split(format!("data-type=\\\"{}\\\" data-id=\\\"", video_type).as_str()).skip(1)
+            .map(|x| x.split_once("\\\"\\n").unwrap().0.to_string())
+            .collect();
+
+    if provider_list.is_empty() {
+        response.split(format!("data-type=\\\"{}\\\" data-id=\\\"", "raw").as_str()).skip(1)
+            .map(|x| x.split_once("\\\"\\n").unwrap().0.to_string())
+            .collect()
+    } else {
+        provider_list
+    }
 }
