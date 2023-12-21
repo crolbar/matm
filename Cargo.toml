@@ -7,6 +7,7 @@ edition = "2021"
 tokio = { version = "1", features = ["full"] }
 serde = {version = "1", features = ["derive"]}
 clap = { version = "4.4", features = ["derive"] }
+selector = { path = "./selector" }
 futures = "0.3.28"
 serde_json = "1.0"
 rust_fzf = "0.1"
