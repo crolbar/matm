@@ -38,7 +38,11 @@ impl Man {
         let all_chapters: Vec<f32> = 
             page.select(&li_sel).rev().map(|c|
                 (
-                    c.select(&a_sel).next().unwrap().value().attr("href").unwrap().rsplit_once('-').unwrap().1.parse().unwrap()
+                    c.select(&a_sel)
+                    .next().unwrap()
+                    .value().attr("href").unwrap()
+                    .rsplit_once('-').unwrap().1
+                    .parse().unwrap()
                 )
             ).collect();
 
@@ -51,7 +55,8 @@ impl Man {
     }
 
     pub fn create_cbz(&self) {
-        if std::fs::metadata(dirs::home_dir().unwrap().join(format!(".cache/matm/{}-{}.cbz", self.name, self.chapter))).is_err() {
+        let home_dir = dirs::home_dir().unwrap();
+        if std::fs::metadata(home_dir.join(format!(".cache/matm/{}-{}.cbz", self.name, self.chapter))).is_err() {
             println!("{}Downloading chapter {} of {}", "\x1b[32m", self.chapter, self.name);
             let response = get_response(&format!("https://chapmanganato.com/{}/chapter-{}", self.url_id.rsplit_once("/").unwrap().1, self.chapter)).unwrap();
             let page = Html::parse_document(&response);
@@ -69,7 +74,7 @@ impl Man {
             
             get_imgs(img_urls);
             
-            std::fs::rename(dirs::home_dir().unwrap().join(".cache/matm/false.cbz"), format!(".cache/matm/{}-{}.cbz", self.name, self.chapter)).unwrap();
+            std::fs::rename(home_dir.join(".cache/matm/false.cbz"), home_dir.join(format!(".cache/matm/{}-{}.cbz", self.name, self.chapter))).unwrap()
         }
     }
 }

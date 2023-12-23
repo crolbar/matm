@@ -962,7 +962,6 @@ dependencies = [
  "futures",
  "reqwest",
  "ron",
- "rust_fzf",
  "scraper",
  "selector",
  "serde",
@@ -1414,12 +1413,6 @@ dependencies = [
  "serde",
  "serde_derive",
 ]
-
-[[package]]
-name = "rust_fzf"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09edc3791ac59f1c4c161777ff46d65ecf06f3a8a24f6fa21f4fdd76dae52ef6"
 
 [[package]]
 name = "rustc-demangle"

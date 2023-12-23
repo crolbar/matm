@@ -5,7 +5,7 @@ use scraper::{Html, Selector};
 use serde_json::Value;
 
 
-pub fn select_anime(query: &str) -> Ani {
+pub fn select_anime(query: &str) -> std::io::Result<Ani> {
     let div_sel = Selector::parse("div.film_list-wrap").unwrap();
     let link_sel = Selector::parse("a.dynamic-name").unwrap();
 
@@ -39,10 +39,10 @@ pub fn select_anime(query: &str) -> Ani {
         std::process::exit(0)
     }
 
-    let name = match rust_fzf::select(
+    let name = match selector::select(
         anime_result.iter().map(|x| x.0.to_string()).collect(),
-        vec!["--reverse".to_string()],
-    ) {
+        None, None
+    )? {
         name if name.is_empty() => {
             println!("{}Exiting...", "\x1b[33m");
             std::process::exit(0);
@@ -50,14 +50,16 @@ pub fn select_anime(query: &str) -> Ani {
         name => name
     };
 
-    select_episode(
-        anime_result.get(&name).unwrap().to_string(),
-        name
+    Ok(
+        select_episode(
+            anime_result.get(&name).unwrap().to_string(),
+            name
+        )?
     )
 }
 
 
-fn select_episode(anime_id: String, name: String) -> Ani {
+fn select_episode(anime_id: String, name: String) -> std::io::Result<Ani> {
     let episodes_url = format!("https://aniwatch.to/ajax/v2/episode/list/{}", anime_id);
     let episodes_json: Value = serde_json::from_str(get_response(&episodes_url).unwrap().as_str()).unwrap();
 
@@ -72,18 +74,23 @@ fn select_episode(anime_id: String, name: String) -> Ani {
         )
     }
 
-    let episode_num = rust_fzf::select(
+    let episode_num = selector::select(
         (1..=episodes_json["totalItems"].as_u64().unwrap()).map(|x| x.to_string()).collect(),
-        vec!["--reverse".to_string()]
-    ).parse::<usize>().unwrap_or_else(|_| {println!("{}Exiting...", "\x1b[33m"); std::process::exit(0)});
+        None, None
+    )?.parse::<usize>().unwrap_or_else(|_| {
+        println!("{}Exiting...", "\x1b[33m");
+        std::process::exit(0)
+    });
 
 
-    Ani {
-        ep_ids: Some(all_episode_ids),
-        name: name,
-        ep: episode_num,
-        id: anime_id.parse().unwrap()
-    }
+    Ok(
+        Ani {
+            ep_ids: Some(all_episode_ids),
+            name,
+            ep: episode_num,
+            id: anime_id.parse().unwrap()
+        }
+    )
 }
 
 pub fn update_ep_ids(anime_id: usize) -> Option<Vec<u32>> {

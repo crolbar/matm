@@ -8,9 +8,8 @@ use crossterm::event::poll;
 use crate::update::update;
 use app::Selector;
 
-/// First item of the secord vec is the help message an the secord is err message
-pub fn select<'a>(items: Vec<&'a str>, msg: Vec<&'a str>) -> Result<&'a str> {
-    let mut app = Selector::new(items, msg);
+pub fn select<'a>(items: Vec<String>, help_msg: Option<&'a str>, err_msg: Option<&'a str>) -> Result<String> {
+    let mut app = Selector::new(items, help_msg, err_msg);
     let mut tui = tui::Tui::enter()?;
 
     while !app.exit {
@@ -21,5 +20,5 @@ pub fn select<'a>(items: Vec<&'a str>, msg: Vec<&'a str>) -> Result<&'a str> {
     }
 
     tui.exit()?;
-    Ok(app.items[app.table_state.selected().unwrap()])
+    Ok(app.items[app.table_state.selected().unwrap()].to_string())
 }

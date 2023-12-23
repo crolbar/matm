@@ -5,20 +5,20 @@ pub fn render(app: &mut Selector, frame: &mut Frame) {
     let layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Percentage(25),
-            Constraint::Percentage(50),
-            Constraint::Percentage(25),
+            Constraint::Percentage(15),
+            Constraint::Percentage(70),
+            Constraint::Percentage(15),
         ])
         .split(frame.size());
 
     let layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Percentage(13),
+            Constraint::Percentage(10),
+            Constraint::Percentage(3),
+            Constraint::Percentage(75),
             Constraint::Percentage(2),
-            Constraint::Percentage(70),
-            Constraint::Percentage(2),
-            Constraint::Percentage(13),
+            Constraint::Percentage(10),
         ])
         .split(layout[1]);
 
@@ -30,7 +30,7 @@ pub fn render(app: &mut Selector, frame: &mut Frame) {
 
     {
         let rows = app.items.iter().map(|i| {
-            let cells = [Cell::from(*i)];
+            let cells = [Cell::from(i.as_str())];
             Row::new(cells)
         });
         let dark_red_col = Color::Rgb(100, 0, 0);

@@ -1,73 +1,81 @@
-use mov_select::select_movie_show;
 use crate::hist::{Hist, DataType};
-use mov_mod::{Mov, update_ep_ids};
-pub mod mov_mod;
+pub use mov_mod::Mov;
+mod mov_mod;
 mod mov_select;
 
-pub fn search_movie_show(select_provider: bool, vlc: bool) {
+pub fn search_movie_show(select_provider: bool, vlc: bool) -> std::io::Result<()> {
     let mut query = String::new();
+
     while query.trim().is_empty() {
         println!("{}Search for movie/tv show: {}", "\x1b[34m", "\x1b[0m");
         std::io::stdin().read_line(&mut query).expect("reading stdin");
     }
-    let mut mov = select_movie_show(&query.replace(" ", "-"));
 
-    main_loop(&mut mov, select_provider, vlc)
+    let mut mov = Mov::select_movie_show(&query.replace(" ", "-"))?;
+
+    Ok(main_loop(&mut mov, select_provider, vlc)?)
 }
 
-pub fn select_from_hist(select_provider: bool, vlc: bool) {
+pub fn select_from_hist(select_provider: bool, vlc: bool) -> std::io::Result<()> {
     let hist = Hist::deserialize();
-    let name = rust_fzf::select(
-        hist.mov_data.iter().map(|x| format!("{} Episode {}", x.name, x.ep)).collect(),
-        vec![String::from("--reverse")]
-    ).split_once(" Episode").unwrap_or_else(|| { println!("{}Exiting...", "\x1b[33m"); std::process::exit(0) })
-        .0.to_string();
-    let mut mov = hist.mov_data[hist.mov_data.iter().position(|x| x.name == name).unwrap()].clone();
-    mov.ep_ids = update_ep_ids(mov.season_id.unwrap());
 
-    main_loop(&mut mov, select_provider, vlc);
+    let name = 
+        selector::select(
+            hist.mov_data
+                .iter()
+                .map(|x| {
+                    format!("{} Episode {}", x.name, x.ep)
+                })
+                .collect(),
+                None, None
+        )?.split_once(" Episode")
+            .unwrap_or_else(|| {
+                println!("{}Exiting...", "\x1b[33m");
+                std::process::exit(0) 
+            }).0
+        .to_string();
+
+    let mut mov = hist.mov_data.iter().find(|m| m.name == name).unwrap().clone();
+
+    mov.update_ep_ids();
+
+    Ok(main_loop(&mut mov, select_provider, vlc)?)
 }
 
 
-fn main_loop(mov: &mut Mov, select_provider: bool, vlc: bool) {
-    let ep_id = &mov.ep_ids.clone().unwrap()[mov.ep - 1];
-    let mut provider_index = get_provider_index(select_provider, &ep_id, mov.clone());
+fn main_loop(mov: &mut Mov, select_provider: bool, vlc: bool) -> std::io::Result<()> {
+    let mut provider_index = get_provider_index(select_provider, mov)?;
 
     loop {
         mov.play(provider_index, vlc);
-        
-        if !mov.name.contains("(movie)") {
-            match mov.ep + 1 > mov.ep_ids.clone().unwrap().len() {
-                true => {
-                    if Hist::deserialize().mov_data.iter().position(|x| x.name == mov.name) != None {
-                        Hist::remove(&mov.name, DataType::MovData);
-                    }
-                },
-                false => Hist::mov_save(mov.clone())
-            }
-        }
+
+        remove_from_hist_if_last_ep(mov);
 
         if mov.name.contains("(movie)") {
-            let select = rust_fzf::select(
-                vec!["search".to_string(), "replay".to_string(), "change provider".to_string(), "quit".to_string()], 
-                vec!["--reverse".to_string(), format!("--header={}", mov.name)]).to_string();
+            let select = selector::select(
+                vec![String::from("search"),
+                    String::from("replay"),
+                    String::from("change provider"),
+                    String::from("quit"),
+                ], 
+               Some(&mov.name), None
+           )?;
 
             match select.as_str() {
                 "search" => {
                     let mut query = String::new();
                     println!("{}Search for movie/tv show: {}", "\x1b[34m", "\x1b[0m");
                     std::io::stdin().read_line(&mut query).expect("reading stdin");
-                    *mov = select_movie_show(&query.replace(" ", "-"));
+                    *mov = Mov::select_movie_show(&query.replace(" ", "-"))?;
                 },
-                "replay" => (),
                 "change provider"  => {
-                    provider_index = get_provider_index(true, &ep_id , mov.clone());
+                    provider_index = get_provider_index(true, mov)?;
                 },
                 "quit" => std::process::exit(0),
                 _ => ()
             }
         } else {
-            let select = rust_fzf::select(
+            let select = selector::select(
                 vec![String::from("next"),
                     String::from("replay"),
                     String::from("previous"),
@@ -76,26 +84,40 @@ fn main_loop(mov: &mut Mov, select_provider: bool, vlc: bool) {
                     String::from("search"),
                     String::from("quit")
                 ], 
-                vec!["--reverse".to_string(), format!("--header=Current ep - {} of {}", mov.ep, mov.name)]).to_string();
+                Some(&format!("Current ep - {} of {}", mov.ep, mov.name)), None
+            )?;
 
             match select.as_str() {
-                "next" => {mov.ep += 1; if mov.ep > mov.ep_ids.clone().unwrap().len() { println!("{}Episode out of bound", "\x1b[31m");  std::process::exit(0) } },
-                "replay" => (),
-                "previous" => {mov.ep -= 1; if mov.ep == 0 { println!("{}Episode out of bound", "\x1b[31m");  std::process::exit(0) } },
+                "next" => {
+                    mov.ep += 1;
+
+                    if mov.ep > mov.ep_ids.clone().unwrap().len() {
+                        println!("{}Episode out of bound", "\x1b[31m");
+                        std::process::exit(0) 
+                    } 
+                },
+                "previous" => {
+                    mov.ep -= 1; 
+
+                    if mov.ep == 0 {
+                        println!("{}Episode out of bound", "\x1b[31m");
+                        std::process::exit(0) 
+                    } 
+                },
                 "select ep" => {
-                    mov.ep = rust_fzf::select(
+                    mov.ep = selector::select(
                         (1..=mov.ep_ids.clone().unwrap().len()).map(|x| x.to_string()).collect(),
-                        vec!["--reverse".to_string()]
-                    ).parse().unwrap()
+                        Some("select episode"), None
+                    )?.parse().unwrap()
                 },
                 "change provider"  => {
-                    provider_index = get_provider_index(true, &ep_id , mov.clone());
+                    provider_index = get_provider_index(true, mov)?;
                 },
                 "search" => {
                     let mut query = String::new();
                     println!("{}Search for movie/tv show: {}", "\x1b[34m", "\x1b[0m");
                     std::io::stdin().read_line(&mut query).expect("reading stdin");
-                    *mov = select_movie_show(&query.replace(" ", "-"));
+                    *mov = Mov::select_movie_show(&query.replace(" ", "-")).unwrap();
                 },
                 "quit" => std::process::exit(0),
                 _ => ()
@@ -104,18 +126,37 @@ fn main_loop(mov: &mut Mov, select_provider: bool, vlc: bool) {
     }
 }
 
-fn get_provider_index(select_provider: bool, ep_id: &str, mov: Mov) -> usize {
+fn get_provider_index(select_provider: bool, mov: &Mov) -> std::io::Result<usize> {
     let range: Vec<String> = match mov.name.contains("(movie)") {
-        true => (1..=mov.ep_ids.unwrap().len()).map(|x| x.to_string()).collect(),
-        false => (1..=mov_mod::get_ep_data_id(ep_id).len()).map(|x| x.to_string()).collect()
-    };
+        true => 1..=mov.ep_ids.clone().unwrap().len(),
+        false => 1..=mov.get_ep_data_id().len()
+    }.map(|x| x.to_string()).collect();
 
     if range.len() > 1 {
         if select_provider {
-            rust_fzf::select(
-                range,
-                vec![String::from("--reverse"), String::from("--header=Change the provider server. (usualy the last ones don't work) (if you havent changed it it defaults to the first)")]
-            ).parse::<usize>().unwrap_or_else(|_| { println!("{}Exiting...", "\x1b[33m"); std::process::exit(0) }) - 1
-        } else { 0 }
-    } else { 0 }
+            Ok(
+                selector::select(
+                    range,
+                    Some("Change the provider server. (usualy the last ones are not supported) (if you havent changed it, it defaults to the first)"), None
+                ).unwrap()
+                .parse::<usize>().unwrap_or_else(|_| {
+                    println!("{}Exiting...", "\x1b[33m");
+                    std::process::exit(0) 
+                }) - 1
+            )
+        } else { Ok(0) }
+    } else { Ok(0) }
+}
+
+fn remove_from_hist_if_last_ep(mov: &Mov) {
+    if !mov.name.contains("(movie)") {
+        match mov.ep + 1 > mov.ep_ids.clone().unwrap().len() {
+            true => {
+                if Hist::deserialize().mov_data.iter().position(|x| x.name == mov.name) != None {
+                    Hist::remove(&mov.name, DataType::MovData);
+                }
+            },
+            false => Hist::mov_save(mov.clone())
+        }
+    }
 }

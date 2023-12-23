@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
-use crate::ani::ani_mod::Ani;
-use crate::mov::mov_mod::Mov;
-use crate::man::man_mod::Man;
+use crate::ani::Ani;
+use crate::mov::Mov;
+use crate::man::Man;
 use std::io::BufReader;
 use std::fs::File;
 

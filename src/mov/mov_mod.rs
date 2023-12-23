@@ -1,5 +1,5 @@
 use crate::utils::{get_sources_response, get_response, decrypt_url, Sources};
-pub use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::process::Command;
 use scraper::Selector;
 use serde_json::Value;
@@ -59,11 +59,11 @@ impl Mov {
     }
 
     fn get_sources(&self, provider_index: usize) -> Result<Sources, Box<dyn std::error::Error>> {
-        let mut url = "https://flixhq.to/ajax/sources/".to_string();
-        match self.name.contains("movie") {
-            true => url = format!("{}{}", url, self.ep_ids.clone().unwrap()[provider_index]),
-            false => url = format!("{}{}", url, get_ep_data_id(&self.ep_ids.clone().unwrap()[self.ep - 1])[provider_index])
-        }
+        let url = 
+            match self.name.contains("movie") {
+                true => format!("https://flixhq.to/ajax/sources/{}", self.ep_ids.clone().unwrap()[provider_index]),
+                false => format!("https://flixhq.to/ajax/sources/{}", self.get_ep_data_id()[provider_index])
+            };
         
         let provider: Value = serde_json::from_str(get_response(&url)?.as_str())?;
         let provider_url = url::Url::parse(provider["link"].as_str().ok_or("Missing 'link' field")?)?;
@@ -101,19 +101,34 @@ impl Mov {
             subs: sub_source,
         })
     }
-}
 
+    pub fn update_ep_ids(&mut self) {
+        let a_sel = Selector::parse("a").unwrap();
 
-pub fn get_ep_data_id(ep_id: &str) -> Vec<String> {
-    let req = scraper::Html::parse_document(&get_response(&format!("https://flixhq.to/ajax/v2/episode/servers/{}", ep_id)).unwrap());
-    let a_sel = Selector::parse("a").unwrap();
-    req.select(&a_sel).map(|x| x.value().attr("data-id").unwrap().to_string()).collect()
-}
+        let response = 
+            if let Ok(resp) = get_response(
+                &format!("https://flixhq.to/ajax/v2/season/episodes/{}", self.season_id.unwrap())
+            ) {
+                resp
+            } else {
+                println!("{}No internet connection", "\x1b[33m");
+                std::process::exit(0)
+            };
 
-pub fn update_ep_ids(season_id: usize) -> Option<Vec<String>> {
-    let response = get_response(&format!("https://flixhq.to/ajax/v2/season/episodes/{}", season_id)).unwrap_or_else(|_| { println!("{}No internet connection", "\x1b[33m"); std::process::exit(0) });
-    let episodes_page = scraper::Html::parse_document(&response);
-    let a_sel = Selector::parse("a").unwrap();
+        let episodes_page = scraper::Html::parse_document(&response);
 
-    Some(episodes_page.select(&a_sel).map(|x| x.value().attr("data-id").unwrap().to_string()).collect())
+        self.ep_ids = Some(
+            episodes_page
+            .select(&a_sel)
+            .map(|x| x.value().attr("data-id").unwrap().to_string())
+        .collect())
+    }
+
+    pub fn get_ep_data_id(&self) -> Vec<String> {
+        let a_sel = Selector::parse("a").unwrap();
+        let response = get_response(&format!("https://flixhq.to/ajax/v2/episode/servers/{}", self.ep_ids.clone().unwrap()[self.ep - 1])).unwrap();
+        let provider_page = scraper::Html::parse_document(&response);
+
+        provider_page.select(&a_sel).map(|x| x.value().attr("data-id").unwrap().to_string()).collect()
+    }
 }

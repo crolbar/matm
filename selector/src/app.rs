@@ -3,7 +3,7 @@ use crossterm::event::MouseEvent;
 
 #[derive(Default)]
 pub struct Selector<'a> {
-    pub items: Vec<&'a str>,
+    pub items: Vec<String>,
     pub table_state: TableState,
     pub table_rect: Rect,
     pub exit: bool,
@@ -12,11 +12,11 @@ pub struct Selector<'a> {
 }
 
 impl<'a> Selector<'a> {
-    pub fn new(items: Vec<&'a str>, msg: Vec<&'a str>) -> Self {
+    pub fn new(items: Vec<String>, help_msg: Option<&'a str>, err_msg: Option<&'a str>) -> Self {
         Selector { 
             items,
-            help_msg: msg.get(0).copied(),
-            err_msg: msg.get(1).copied(),
+            help_msg,
+            err_msg,
             table_state: TableState::default().with_selected(Some(0)),
             ..Default::default()
         }

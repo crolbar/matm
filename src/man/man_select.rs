@@ -1,8 +1,9 @@
+use std::collections::HashMap;
 use crate::man::man_mod::Man;
 use crate::utils::get_response;
 use scraper::{Html, Selector};
 
-pub fn select_manga(query: &str) -> Man {
+pub fn select_manga(query: &str) -> std::io::Result<Man> {
     let url = format!("https://manganato.com/search/story/{}", query);
     let response = get_response(&url).unwrap_or_else(|_| { println!("{}No internet connection", "\x1b[33m"); std::process::exit(0) });
 
@@ -12,28 +13,41 @@ pub fn select_manga(query: &str) -> Man {
 
     let search_page = Html::parse_document(&response);
 
-    let mut search_results: Vec<(String, String)> = Vec::new();
-    for i in search_page.select(&div_sel) {
-        let a_elem = i.select(&h3_sel).next().unwrap().select(&a_sel).next().unwrap();
-        search_results.push((
-            a_elem.text().collect::<Vec<_>>().join(""),
-            a_elem.value().attr("href").unwrap().to_string()
-        ));
-    }
+    let name_url_map: HashMap<String, String> = 
+        search_page.select(&div_sel).map(|i| {
+            let a_elem = i.select(&h3_sel).next().unwrap().select(&a_sel).next().unwrap();
 
-    if search_results.is_empty() {
+            (
+                a_elem.text().collect::<Vec<_>>().join(""), // name
+                a_elem.value().attr("href").unwrap().to_string() // url
+            )
+        }).collect();
+    
+
+    if name_url_map.is_empty() {
         println!("{}No results found", "\x1b[31m");
         std::process::exit(0)
     }
 
-    let selected_name = rust_fzf::select(search_results.iter().map(|x| x.0.clone()).collect(), vec!["--reverse".to_string()]);
-    if selected_name.is_empty() { std::process::exit(0) }
+    let name = selector::select(
+        name_url_map.iter().map(|x| x.0.clone()).collect(), None, None
+    )?;
+    if name.is_empty() { std::process::exit(0) }
 
-    let man = search_results.iter().find(|i| i.0 == selected_name).cloned().unwrap();
-    let mut man = Man { all_chapters: Man::get_all_chapters(&man.1), chapter: 0.001, url_id: man.1, name: man.0 };
 
-    man.chapter = rust_fzf::select(man.all_chapters.clone().iter().map(|x| x.to_string()).collect(), vec!["--reverse".to_string()]).parse().unwrap();
-    if man.chapter == 0.001 { std::process::exit(1) }
+    let name_url = name_url_map.get_key_value(&name).unwrap();
 
-    man
+    let mut man = Man { 
+        all_chapters: Man::get_all_chapters(&name_url.1),
+        url_id: name_url.1.to_string(),
+        name: name_url.0.to_string(),
+        chapter: 0.0,
+    };
+
+    man.chapter = selector::select(
+        man.all_chapters.clone().iter().map(|x| x.to_string()).collect(),
+        None, None
+    )?.parse().unwrap_or_else(|_| std::process::exit(0));
+
+    Ok(man)
 }
