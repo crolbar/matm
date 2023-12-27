@@ -1,5 +1,6 @@
 use ratatui::{widgets::TableState, prelude::Rect};
 use crossterm::event::MouseEvent;
+use rust_fuzzy_search::fuzzy_search;
 
 #[derive(Default)]
 pub struct Selector<'a> {
@@ -9,6 +10,59 @@ pub struct Selector<'a> {
     pub exit: bool,
     pub help_msg: Option<&'a str>,
     pub err_msg: Option<&'a str>,
+    pub search: Search,
+}
+
+#[derive(Default)]
+pub struct Search {
+    pub haystack: Vec<String>,
+    pub needle: String,
+}
+
+impl Search {
+    pub fn push_char(&mut self, c: char) {
+        self.needle.push(c)
+    }
+    pub fn pop_char(&mut self) {
+        if !self.needle.is_empty() {
+            self.needle.pop().unwrap();
+        }
+    }
+
+    fn set_origin_items(&mut self, items: &Vec<String>) {
+        self.haystack = items.clone();
+    }
+
+    pub fn revert_items(&mut self, items: &mut Vec<String>) {
+        *items = self.haystack.clone();
+        self.haystack.clear();
+    }
+
+    pub fn search_trough_origin_items(&mut self, items: &mut Vec<String>) {
+        if self.haystack.is_empty() {
+            self.set_origin_items(items);
+        }
+        items.clear();
+
+        let haystack: Vec<String> = self.haystack
+            .iter()
+            .map(|i| {
+                i.to_lowercase()
+                .replace(" ", "")
+            }).collect();
+        let haystack = haystack.iter().map(|i| i.as_str()).collect::<Vec<&str>>();
+
+        fuzzy_search(
+            &self.needle, 
+            &haystack.as_slice()
+        ).iter()
+        .enumerate()
+        .for_each(|(i, (_, score))| {
+            if *score > 0.2 {
+                items.push(self.haystack[i].clone())
+            }
+        });
+    }
 }
 
 impl<'a> Selector<'a> {

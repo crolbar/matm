@@ -37,6 +37,7 @@ pub fn render(app: &mut Selector, frame: &mut Frame) {
 
         frame.render_stateful_widget(
             Table::new(rows, [Constraint::Percentage(100)])
+            .header(Row::new([Cell::new(app.search.needle.clone())]))
             .block(
                 Block::default()
                 .borders(Borders::LEFT | Borders::RIGHT)
