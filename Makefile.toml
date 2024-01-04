@@ -3,3 +3,9 @@ script = [
     "cargo build",
     "cp target/debug/matm ~/bin"
 ]
+
+[tasks.arch]
+script = [
+    "cargo build",
+    "sudo cp target/debug/matm /bin"
+]

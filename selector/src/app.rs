@@ -104,7 +104,7 @@ impl<'a> Selector<'a> {
             click_ev.row >= self.table_rect.y && 
             click_ev.row <= self.table_rect.y + self.table_rect.height
         {
-            let click_item_idex = (click_ev.row - self.table_rect.y) as usize;
+            let click_item_idex = ((click_ev.row - self.table_rect.y) as usize).saturating_sub(1);
 
             if click_item_idex == self.table_state.selected().unwrap() {
                 self.exit = true
