@@ -4,10 +4,10 @@ use rust_fuzzy_search::fuzzy_search;
 
 #[derive(Default)]
 pub struct Selector<'a> {
+    pub exit: bool,
     pub items: Vec<String>,
     pub table_state: TableState,
     pub table_rect: Rect,
-    pub exit: bool,
     pub help_msg: Option<&'a str>,
     pub err_msg: Option<&'a str>,
     pub search: Search,
@@ -48,7 +48,7 @@ impl Search {
             .iter()
             .map(|i| {
                 i.to_lowercase()
-                .replace(" ", "")
+                .split_whitespace().collect::<String>()
             }).collect();
         let haystack = haystack.iter().map(|i| i.as_str()).collect::<Vec<&str>>();
 
@@ -62,6 +62,14 @@ impl Search {
                 items.push(self.haystack[i].clone())
             }
         });
+    
+        if items.is_empty() {
+            *items = self.haystack
+                .iter()
+                .filter(|i| i.contains(&self.needle))
+                .cloned()
+                .collect()
+        }
     }
 }
 
@@ -77,20 +85,25 @@ impl<'a> Selector<'a> {
     }
 
     pub fn sel_next_item(&mut self) {
-        self.table_state.select(
-            Some( (self.table_state.selected().unwrap() + 1) % self.items.len() )
-        )
+        if !self.items.is_empty() {
+            self.table_state.select(
+                Some( (self.table_state.selected().unwrap() + 1) % self.items.len() )
+            )
+        }
     }
     pub fn sel_prev_item(&mut self) {
         let sel = self.table_state.selected().unwrap();
-        self.table_state.select(
-            Some(
-                match sel {
-                    0 => self.items.len() - 1,
-                    _ => sel - 1
-                }
+
+        if !self.items.is_empty() {
+            self.table_state.select(
+                Some(
+                    match sel {
+                        0 => self.items.len() - 1,
+                        _ => sel - 1
+                    }
+                )
             )
-        )
+        }
     }
 
     pub fn set_table_rect(&mut self, rect: Rect) {
