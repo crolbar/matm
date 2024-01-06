@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use crate::utils::get_response;
 use crate::mov::mov_mod::Mov;
 use scraper::{Html, Selector};
@@ -61,8 +60,7 @@ impl Mov {
             std::process::exit(0)
         } 
 
-
-        let movie_id = movie_ids[name_search_results.iter().position(|x| x == &name).unwrap()];
+        let movie_id = movie_ids.iter().find(|i| *i == &name).unwrap();
 
         Ok(
             if name.contains("movie") {
@@ -86,25 +84,27 @@ impl Mov {
         let a_sel = Selector::parse("a").unwrap();
         let seasons_page = Html::parse_document(&response);
 
-        let mut seasons: HashMap<String, &str> = HashMap::new();
+        let mut seasons: Vec<(String, &str)> = Vec::new();
 
-        for i in seasons_page.select(&a_sel) {
-            seasons.insert(
-                i.text().collect::<Vec<_>>().join(""),
-                i.value().attr("data-id").unwrap()
-            );
-        }
+        seasons_page.select(&a_sel).for_each(|i| {
+            seasons.push(
+                (
+                    i.text().collect::<Vec<_>>().join(""),
+                    i.value().attr("data-id").unwrap()
+                )
+            )
+        });
 
         let season_num = 
             selector::select(
-                seasons.keys().map(|x| x.to_string()).collect(),
+                seasons.iter().map(|i| i.0.to_string()).collect(),
                 None, None
             ).unwrap();
 
 
         (
-            seasons.get(&season_num).unwrap().to_string(), // season id
-            format!("{} {}", name, season_num)
+            seasons.iter().find(|i| i.0 == season_num).unwrap().1.to_string(), // season id
+            format!("{} {}", name, season_num) // name
         )
     }
 
@@ -118,7 +118,7 @@ impl Mov {
             .map(|x| x.value().attr("data-id").unwrap().to_string())
             .collect();
 
-        let episode_num = 
+        let ep = 
             selector::select(
                 (1..=all_episode_ids.len()).map(|x| x.to_string()).collect(),
                 None, None
@@ -131,7 +131,7 @@ impl Mov {
         Self {
             ep_ids: Some(all_episode_ids),
             season_id: Some(season_id.parse().unwrap()),
-            ep: episode_num,
+            ep,
             name,
         }
     }
