@@ -119,10 +119,6 @@ impl<'a> Selector<'a> {
         {
             let click_item_idex = ((click_ev.row - self.table_rect.y) as usize).saturating_sub(1);
 
-            if click_item_idex == self.table_state.selected().unwrap() {
-                self.exit = true
-            } 
-
             if click_ev.row > self.items.len() as u16 + self.table_rect.y {
                 self.table_state.select(Some(self.items.len() - 1))
             } else {

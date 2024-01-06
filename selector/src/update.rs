@@ -1,4 +1,4 @@
-use crossterm::event::{KeyCode, Event, self, MouseEventKind, KeyModifiers};
+use crossterm::event::{KeyCode, Event, self, MouseEventKind, KeyModifiers, MouseEvent};
 use std::io::Result;
 
 use crate::{app::Selector, tui::Tui};
@@ -83,7 +83,18 @@ pub fn update(app: &mut Selector, tui: &mut Tui) -> Result<()> {
             match mouse_ev.kind {
                 MouseEventKind::ScrollDown => app.sel_next_item(),
                 MouseEventKind::ScrollUp => app.sel_prev_item(),
-                MouseEventKind::Down(_) => app.handle_mb_down(mouse_ev),
+                MouseEventKind::Down(_) => {
+                    app.handle_mb_down(mouse_ev);
+                    tui.draw(app)?;
+
+                    if let Ok(Event::Mouse(MouseEvent { kind: MouseEventKind::Up(_), .. })) = event::read() {
+                        if crossterm::event::poll(std::time::Duration::from_millis(200))? {
+                            if let Ok(Event::Mouse(MouseEvent { kind: MouseEventKind::Down(_), .. })) = event::read() {
+                                app.exit = true
+                            }
+                        }
+                    }
+                },
                 _ => ()
             }
         }
