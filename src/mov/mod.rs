@@ -46,9 +46,9 @@ pub fn select_from_hist(select_provider: bool, vlc: bool) -> std::io::Result<()>
 fn main_loop(mov: &mut Mov, select_provider: bool, vlc: bool) -> std::io::Result<()> {
     let mut provider_index = get_provider_index(select_provider, mov)?;
 
-    loop {
-        mov.play(provider_index, vlc);
+    mov.play(provider_index, vlc);
 
+    loop {
         remove_from_hist_if_last_ep(mov);
 
         if mov.name.contains("(movie)") {
@@ -76,8 +76,9 @@ fn main_loop(mov: &mut Mov, select_provider: bool, vlc: bool) -> std::io::Result
             }
         } else {
             let select = selector::select(
-                vec![String::from("next"),
-                    String::from("replay"),
+                vec![String::from("play next"),
+                    String::from("play"),
+                    String::from("next"),
                     String::from("previous"),
                     String::from("select ep"),
                     String::from("change provider"),
@@ -88,6 +89,19 @@ fn main_loop(mov: &mut Mov, select_provider: bool, vlc: bool) -> std::io::Result
             )?;
 
             match select.as_str() {
+                "play next" => {
+                    mov.ep += 1;
+
+                    if mov.ep > mov.ep_ids.clone().unwrap().len() {
+                        println!("{}Episode out of bound", "\x1b[31m");
+                        std::process::exit(0) 
+                    } 
+
+                    mov.play(provider_index, vlc);
+                }
+                "play" => {
+                    mov.play(provider_index, vlc);
+                },
                 "next" => {
                     mov.ep += 1;
 
@@ -119,7 +133,9 @@ fn main_loop(mov: &mut Mov, select_provider: bool, vlc: bool) -> std::io::Result
                     std::io::stdin().read_line(&mut query).expect("reading stdin");
                     *mov = Mov::select_movie_show(&query.replace(" ", "-")).unwrap();
                 },
-                "quit" => std::process::exit(0),
+                "quit" => {
+                    std::process::exit(0);
+                } 
                 _ => ()
             }
         }

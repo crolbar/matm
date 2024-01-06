@@ -60,7 +60,7 @@ impl Mov {
             std::process::exit(0)
         } 
 
-        let movie_id = movie_ids.iter().find(|i| *i == &name).unwrap();
+        let movie_id = movie_ids[name_search_results.iter().position(|x| x == &name).unwrap()];
 
         Ok(
             if name.contains("movie") {

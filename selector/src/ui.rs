@@ -26,7 +26,7 @@ pub fn render(app: &mut Selector, frame: &mut Frame) {
     let table_rect = layout[2];
     let err_rect = layout[3];
     app.set_table_rect(table_rect);
-    
+    frame.set_cursor(table_rect.x + 3 + app.search.needle.len() as u16, table_rect.y);
 
     {
         let rows = app.items.iter().map(|i| {

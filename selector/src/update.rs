@@ -10,6 +10,7 @@ pub fn update(app: &mut Selector, tui: &mut Tui) -> Result<()> {
             if 
                 key.modifiers == KeyModifiers::CONTROL && key.code == KeyCode::Char('c') ||
                 key.modifiers == KeyModifiers::CONTROL && key.code == KeyCode::Char('z') ||
+                key.modifiers == KeyModifiers::ALT && key.code == KeyCode::Char('q') ||
                 key.code == KeyCode::Esc
             {
                 tui.exit()?;
@@ -38,10 +39,6 @@ pub fn update(app: &mut Selector, tui: &mut Tui) -> Result<()> {
                         'k' => app.sel_prev_item(),
                         'g' => app.table_state.select(Some(0)),
                         'G' => app.table_state.select(Some(app.items.len().saturating_sub(1))),
-                        'q' => {
-                            tui.exit()?;
-                            std::process::exit(0)
-                        }
                         _ => ()
                     }
                 }
