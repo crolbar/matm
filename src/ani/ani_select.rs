@@ -7,6 +7,8 @@ use serde_json::Value;
 
 pub fn select_anime(query: &str) -> std::io::Result<Ani> {
     let div_sel = Selector::parse("div.film_list-wrap").unwrap();
+    let item_sel = Selector::parse("div.flw-item").unwrap();
+    let num_eps_sel = Selector::parse("div.tick-item").unwrap();
     let link_sel = Selector::parse("a.dynamic-name").unwrap();
 
     let mut anime_result: HashMap<String, String>= HashMap::new();
@@ -18,16 +20,25 @@ pub fn select_anime(query: &str) -> std::io::Result<Ani> {
         let search_page = Html::parse_document(response.as_str());
         let search_results = search_page.select(&div_sel).next().unwrap();
 
-        let elem_iter = search_results.clone().select(&link_sel);
+        let elem_iter = search_results.clone().select(&item_sel);
         if elem_iter.clone().count() == 0 { break }
 
         for element in elem_iter {
+            let link = element.select(&link_sel).next().unwrap();
+            let mut name = link.text().collect::<Vec<_>>().join("");
+
+            if anime_result.iter().find(|i| i.1 == &name).is_some() {
+                let num_of_eps_div = element.select(&num_eps_sel).next().unwrap();
+                let num_of_eps = num_of_eps_div.text().collect::<String>();
+                name.push_str(format!(" (EPS: {})", num_of_eps).as_str());
+            }
+
             anime_result.insert(
-                element.value().attr("href").unwrap()
+                link.value().attr("href").unwrap()
                 .split('-').last().unwrap()
                 .split_once('?').unwrap().0.to_string(),
 
-                element.text().collect::<Vec<_>>().join("")
+                name
             );
         }
 
