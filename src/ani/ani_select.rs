@@ -23,11 +23,11 @@ pub fn select_anime(query: &str) -> std::io::Result<Ani> {
 
         for element in elem_iter {
             anime_result.insert(
-                element.text().collect::<Vec<_>>().join(""),
-
                 element.value().attr("href").unwrap()
-                    .split('-').last().unwrap()
-                    .split_once('?').unwrap().0.to_string()     
+                .split('-').last().unwrap()
+                .split_once('?').unwrap().0.to_string(),
+
+                element.text().collect::<Vec<_>>().join("")
             );
         }
 
@@ -40,7 +40,7 @@ pub fn select_anime(query: &str) -> std::io::Result<Ani> {
     }
 
     let name = match selector::select(
-        anime_result.iter().map(|x| x.0.to_string()).collect(),
+        anime_result.iter().map(|x| x.1.to_string()).collect(),
         None, None
     )? {
         name if name.is_empty() => {
@@ -52,7 +52,7 @@ pub fn select_anime(query: &str) -> std::io::Result<Ani> {
 
     Ok(
         select_episode(
-            anime_result.get(&name).unwrap().to_string(),
+            anime_result.iter().find(|i| i.1 == &name).unwrap().0.to_string(),
             name
         )?
     )
