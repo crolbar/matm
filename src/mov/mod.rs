@@ -49,7 +49,7 @@ fn main_loop(mov: &mut Mov, select_provider: bool, vlc: bool) -> std::io::Result
     mov.play(provider_index, vlc);
 
     loop {
-        remove_from_hist_if_last_ep(mov);
+        save_to_hist(mov);
 
         if mov.name.contains("(movie)") {
             let select = selector::select(
@@ -164,7 +164,7 @@ fn get_provider_index(select_provider: bool, mov: &Mov) -> std::io::Result<usize
     } else { Ok(0) }
 }
 
-fn remove_from_hist_if_last_ep(mov: &Mov) {
+fn save_to_hist(mov: &Mov) {
     if !mov.name.contains("(movie)") {
         match mov.ep + 1 > mov.ep_ids.clone().unwrap().len() {
             true => {

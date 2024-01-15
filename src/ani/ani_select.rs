@@ -1,8 +1,8 @@
 use crate::utils::get_response;
-use crate::ani::ani_mod::Ani;
 use std::collections::HashMap;
 use scraper::{Html, Selector};
 use serde_json::Value;
+use crate::ani::Ani;
 
 
 pub fn select_anime(query: &str) -> std::io::Result<Ani> {
@@ -99,7 +99,8 @@ fn select_episode(anime_id: String, name: String) -> std::io::Result<Ani> {
             ep_ids: Some(all_episode_ids),
             name,
             ep: episode_num,
-            id: anime_id.parse().unwrap()
+            id: anime_id.parse().unwrap(),
+            ..Default::default()
         }
     )
 }
