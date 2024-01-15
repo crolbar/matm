@@ -44,8 +44,8 @@ pub fn update(app: &mut Selector, tui: &mut Tui) -> Result<()> {
                 }
             } else {
                 match key.code {
-                    KeyCode::Down => app.sel_next_item(),
-                    KeyCode::Up => app.sel_prev_item(),
+                    KeyCode::Down | KeyCode::Tab => app.sel_next_item(),
+                    KeyCode::Up | KeyCode::BackTab => app.sel_prev_item(),
                     KeyCode::Enter => { 
                         app.exit = !app.items.is_empty()
                     }
