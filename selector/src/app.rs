@@ -1,6 +1,5 @@
 use ratatui::{widgets::TableState, prelude::Rect};
 use crossterm::event::MouseEvent;
-use rust_fuzzy_search::fuzzy_search;
 
 #[derive(Default)]
 pub struct Selector<'a> {

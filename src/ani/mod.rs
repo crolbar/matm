@@ -2,7 +2,6 @@ use crate::utils::{get_response, decrypt_url, Sources};
 use serde::{Deserialize, Serialize};
 use crate::hist::{Hist, DataType};
 use scraper::{Html, Selector};
-use ani_select::select_anime;
 use std::process::Command;
 use serde_json::Value;
 mod ani_select;
@@ -15,7 +14,7 @@ pub fn search_anime(select_provider: bool, is_dub: bool) -> std::io::Result<()> 
         std::io::stdin().read_line(&mut query).expect("reading stdin");
     }
 
-    let mut ani = select_anime(&query)?;
+    let mut ani = Ani::select_anime(&query)?;
     ani.get_provider_index(select_provider)?;
     ani.is_dub = is_dub;
 
@@ -110,7 +109,7 @@ impl Ani {
                     let mut query = String::new();
                     println!("{}Search for selfme: {}", "\x1b[34m", "\x1b[0m");
                     std::io::stdin().read_line(&mut query).expect("reading stdin");
-                    *self = select_anime(&query)?
+                    *self = Ani::select_anime(&query)?
                 },
                 "quit" => std::process::exit(0),
                 _ => ()
