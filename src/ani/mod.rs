@@ -1,7 +1,8 @@
 use crate::utils::{get_response, decrypt_url, Sources};
-use ani_select::{select_anime, update_ep_ids};
 use serde::{Deserialize, Serialize};
 use crate::hist::{Hist, DataType};
+use scraper::{Html, Selector};
+use ani_select::select_anime;
 use std::process::Command;
 use serde_json::Value;
 mod ani_select;
@@ -41,7 +42,7 @@ pub fn select_from_hist(select_provider: bool, is_dub: bool) -> std::io::Result<
     ani.get_provider_index(select_provider)?;
     ani.is_dub = is_dub;
 
-    ani.ep_ids = update_ep_ids(ani.id);
+    ani.update_ep_ids();
 
     Ok(ani.main_loop()?)
 }
@@ -104,9 +105,7 @@ impl Ani {
                 },
                 "switch to sub" => self.is_dub = false,
                 "switch to dub" => self.is_dub = true,
-                "change provider"  => {
-                    self.get_provider_index(true)?;
-                },
+                "change provider"  => self.get_provider_index(true)?,
                 "search" => {
                     let mut query = String::new();
                     println!("{}Search for selfme: {}", "\x1b[34m", "\x1b[0m");
@@ -174,7 +173,11 @@ impl Ani {
                     selector::select(
                         (1..=self.get_ep_data_ids().len()).map(|x| x.to_string()).collect(),
                         Some(
-                            "Change the provider server. (usualy the last ones are not supported) (if you havent changed it, it defaults to the first)"
+                            "
+                                Change the provider server.
+                                (usualy the last ones are not supported)
+                                (if you havent changed it, it defaults to the first)
+                            "
                         ), None
                     )?
                     .parse::<usize>().unwrap_or_else(|_| {
@@ -211,18 +214,42 @@ impl Ani {
     fn save_to_hist(&self) {
         match self.ep + 1 > self.ep_ids.clone().unwrap().len() {
             true => {
-                if Hist::deserialize().ani_data.iter().position(|x| x.name == self.name) != None {
+                if let Some(_) = Hist::deserialize().ani_data.iter().position(|x| x.name == self.name)  {
                     Hist::remove(&self.name, DataType::AniData);
                 }
             },
             false => Hist::ani_save(self.clone())
         }
     }
+
+    fn update_ep_ids(&mut self) {
+        let episodes_url = format!("https://aniwatch.to/ajax/v2/episode/list/{}", self.id);
+        let episodes_json: Value = 
+            serde_json::from_str(
+                &get_response(&episodes_url).unwrap_or_else(|_| {
+                    println!("{}No internet connection", "\x1b[33m");
+                    std::process::exit(0) 
+                })
+            ).unwrap();
+
+        let episodes_html = Html::parse_document(episodes_json["html"].as_str().unwrap());
+        let ep_sel = Selector::parse("a.ssl-item").unwrap();
+
+        self.ep_ids = 
+            Some(
+                episodes_html.select(&ep_sel)
+                    .map(|x| x.value()
+                         .attr("data-id").unwrap()
+                         .parse::<u32>().unwrap()
+                    ).collect()
+            )
+    }
 }
+
 
 fn get_sources(data_id: &str) -> Result<Sources, Box<dyn std::error::Error>> {
     let url = format!("https://aniwatch.to/ajax/v2/episode/sources?id={}", data_id);
-    let provider: Value = serde_json::from_str(get_response(&url)?.as_str())?;
+    let provider: Value = serde_json::from_str(&get_response(&url)?)?;
     let provider_url = url::Url::parse(provider["link"].as_str().ok_or("Missing 'link' field")?)?;
 
     let url = format!("https://{}/embed-2/ajax/e-1/getSources?id={}",

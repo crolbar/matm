@@ -13,9 +13,13 @@ pub fn select_anime(query: &str) -> std::io::Result<Ani> {
 
     let mut anime_result: HashMap<String, String>= HashMap::new();
 
-    let mut page_num = 1;
-    while page_num < 5 { 
-        let response = get_response(&format!("https://aniwatch.to/search?keyword={}&page={}", query, page_num)).unwrap_or_else(|_| { println!("{}No internet connection", "\x1b[33m"); std::process::exit(0) });
+    for page_num in 0..=5 { 
+        let url = format!("https://aniwatch.to/search?keyword={}&page={}", query, page_num);
+        let response = get_response(&url)
+            .unwrap_or_else(|_| {
+                println!("{}No internet connection", "\x1b[33m");
+                std::process::exit(0) 
+            });
 
         let search_page = Html::parse_document(response.as_str());
         let search_results = search_page.select(&div_sel).next().unwrap();
@@ -41,8 +45,6 @@ pub fn select_anime(query: &str) -> std::io::Result<Ani> {
                 name
             );
         }
-
-        page_num += 1;
     }
 
     if anime_result.is_empty() {
@@ -50,42 +52,44 @@ pub fn select_anime(query: &str) -> std::io::Result<Ani> {
         std::process::exit(0)
     }
 
-    let name = match selector::select(
-        anime_result.iter().map(|x| x.1.to_string()).collect(),
-        None, None
-    )? {
-        name if name.is_empty() => {
-            println!("{}Exiting...", "\x1b[33m");
-            std::process::exit(0);
-        }
-        name => name
-    };
+    let name = 
+        selector::select(
+            anime_result.iter().map(|x| x.1.to_string()).collect(),
+            None, None
+        )?;
+
+    if name.is_empty() {
+        println!("{}Exiting...", "\x1b[33m");
+        std::process::exit(0);
+    }
 
     Ok(
         select_episode(
-            anime_result.iter().find(|i| i.1 == &name).unwrap().0.to_string(),
+            anime_result.iter()
+                .find(|i| i.1 == &name).unwrap().0
+                .to_string()
+                .parse().unwrap(),
             name
         )?
     )
 }
 
 
-fn select_episode(anime_id: String, name: String) -> std::io::Result<Ani> {
-    let episodes_url = format!("https://aniwatch.to/ajax/v2/episode/list/{}", anime_id);
-    let episodes_json: Value = serde_json::from_str(get_response(&episodes_url).unwrap().as_str()).unwrap();
+fn select_episode(id: usize, name: String) -> std::io::Result<Ani> {
+    let episodes_url = format!("https://aniwatch.to/ajax/v2/episode/list/{}", id);
+    let episodes_json: Value = serde_json::from_str(&get_response(&episodes_url).unwrap()).unwrap();
 
     let episodes_html = Html::parse_document(episodes_json["html"].as_str().unwrap());
     let ep_sel = Selector::parse("a.ssl-item").unwrap();
 
-    let mut all_episode_ids: Vec<u32> = Vec::new();
-    for element in episodes_html.select(&ep_sel) {
-        all_episode_ids.push(element.value()
-            .attr("data-id").unwrap()
-            .parse::<u32>().unwrap()
-        )
-    }
+    let ep_ids: Option<Vec<u32>> = Some(
+        episodes_html.select(&ep_sel).map(|el| {
+            el.value()
+                .attr("data-id").unwrap()
+                .parse::<u32>().unwrap()
+        }).collect());
 
-    let episode_num = selector::select(
+    let ep = selector::select(
         (1..=episodes_json["totalItems"].as_u64().unwrap()).map(|x| x.to_string()).collect(),
         None, None
     )?.parse::<usize>().unwrap_or_else(|_| {
@@ -93,24 +97,8 @@ fn select_episode(anime_id: String, name: String) -> std::io::Result<Ani> {
         std::process::exit(0)
     });
 
-
-    Ok(
-        Ani {
-            ep_ids: Some(all_episode_ids),
-            name,
-            ep: episode_num,
-            id: anime_id.parse().unwrap(),
-            ..Default::default()
-        }
-    )
-}
-
-pub fn update_ep_ids(anime_id: usize) -> Option<Vec<u32>> {
-    let episodes_url = format!("https://aniwatch.to/ajax/v2/episode/list/{}", anime_id);
-    let episodes_json: Value = serde_json::from_str(get_response(&episodes_url).unwrap_or_else(|_| { println!("{}No internet connection", "\x1b[33m"); std::process::exit(0) }).as_str()).unwrap();
-
-    let episodes_html = Html::parse_document(episodes_json["html"].as_str().unwrap());
-    let ep_sel = Selector::parse("a.ssl-item").unwrap();
-
-    Some(episodes_html.select(&ep_sel).map(|x| x.value().attr("data-id").unwrap().parse::<u32>().unwrap()).collect())
+    Ok(Ani { 
+        ep_ids, name, ep, id,
+        ..Default::default()
+    })
 }

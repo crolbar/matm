@@ -44,32 +44,19 @@ impl Search {
         }
         items.clear();
 
-        let haystack: Vec<String> = self.haystack
+        *items = self.haystack 
             .iter()
-            .map(|i| {
-                i.to_lowercase()
-                .split_whitespace().collect::<String>()
-            }).collect();
-        let haystack = haystack.iter().map(|i| i.as_str()).collect::<Vec<&str>>();
-
-        fuzzy_search(
-            &self.needle, 
-            &haystack.as_slice()
-        ).iter()
-        .enumerate()
-        .for_each(|(i, (_, score))| {
-            if *score > 0.2 {
-                items.push(self.haystack[i].clone())
-            }
-        });
-    
-        if items.is_empty() {
-            *items = self.haystack
-                .iter()
-                .filter(|i| i.contains(&self.needle))
-                .cloned()
-                .collect()
-        }
+            .filter(|i|{
+                let (i, needle) = 
+                    (
+                        i.to_lowercase()
+                        .replace(" ", ""),
+                        self.needle.to_lowercase()
+                        .replace(" ", "")
+                    );
+                i.contains(&needle)
+            }).cloned()
+            .collect()
     }
 }
 
