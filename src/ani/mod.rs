@@ -7,15 +7,12 @@ use serde_json::Value;
 mod ani_select;
 
 pub fn search_anime(select_provider: bool, is_dub: bool) -> std::io::Result<()> {
-    let mut query = String::new();
+    let mut ani = Ani::select_anime(&get_query())?;
 
-    while query.trim().is_empty() {
-        println!("{}Search for anime: {}", "\x1b[34m", "\x1b[0m");
-        std::io::stdin().read_line(&mut query).expect("reading stdin");
+    match select_provider {
+        true => ani.set_provider_index()?,
+        false => ani.provider_index = 0
     }
-
-    let mut ani = Ani::select_anime(&query)?;
-    ani.get_provider_index(select_provider)?;
     ani.is_dub = is_dub;
 
     Ok(ani.main_loop()?)
@@ -38,7 +35,11 @@ pub fn select_from_hist(select_provider: bool, is_dub: bool) -> std::io::Result<
         }).0.to_string();
 
     let mut ani = hist.ani_data.iter().find(|x| x.name == name).unwrap().clone();
-    ani.get_provider_index(select_provider)?;
+
+    match select_provider {
+        true => ani.set_provider_index()?,
+        false => ani.provider_index = 0
+    }
     ani.is_dub = is_dub;
 
     ani.update_ep_ids();
@@ -104,12 +105,10 @@ impl Ani {
                 },
                 "switch to sub" => self.is_dub = false,
                 "switch to dub" => self.is_dub = true,
-                "change provider"  => self.get_provider_index(true)?,
+                "change provider" => self.set_provider_index()?,
                 "search" => {
-                    let mut query = String::new();
-                    println!("{}Search for selfme: {}", "\x1b[34m", "\x1b[0m");
-                    std::io::stdin().read_line(&mut query).expect("reading stdin");
-                    *self = Ani::select_anime(&query)?
+                    *self = Ani::select_anime(&get_query())?;
+                    self.play()
                 },
                 "quit" => std::process::exit(0),
                 _ => ()
@@ -166,24 +165,22 @@ impl Ani {
         }
     }
 
-    fn get_provider_index(&mut self, select_provider: bool) -> std::io::Result<()> {
+    fn set_provider_index(&mut self) -> std::io::Result<()> {
         self.provider_index = 
-            if select_provider {
-                    selector::select(
-                        (1..=self.get_ep_data_ids().len()).map(|x| x.to_string()).collect(),
-                        Some(
-                            "
-                                Change the provider server.
-                                (usualy the last ones are not supported)
-                                (if you havent changed it, it defaults to the first)
-                            "
-                        ), None
-                    )?
-                    .parse::<usize>().unwrap_or_else(|_| {
-                        println!("{}Exiting...", "\x1b[33m");
-                        std::process::exit(0) 
-                    }) - 1
-            } else { 0 };
+                selector::select(
+                    (1..=self.get_ep_data_ids().len()).map(|x| x.to_string()).collect(),
+                    Some(
+                        "
+                            Change the provider server.
+                            (usualy the last ones are not supported)
+                            (if you havent changed it, it defaults to the first)
+                        "
+                    ), None
+                )?
+                .parse::<usize>().unwrap_or_else(|_| {
+                    println!("{}Exiting...", "\x1b[33m");
+                    std::process::exit(0) 
+                }) - 1;
         Ok(())
     }
 
@@ -245,6 +242,14 @@ impl Ani {
     }
 }
 
+fn get_query() -> String {
+    let mut query = String::new();
+    while query.trim().is_empty() {
+        println!("{}Search for anime: {}", "\x1b[34m", "\x1b[0m");
+        std::io::stdin().read_line(&mut query).expect("reading stdin");
+    }
+    query
+}
 
 fn get_sources(data_id: &str) -> Result<Sources, Box<dyn std::error::Error>> {
     let url = format!("https://aniwatch.to/ajax/v2/episode/sources?id={}", data_id);

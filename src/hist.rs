@@ -26,7 +26,10 @@ impl Hist {
     } 
     pub fn deserialize() -> Self {
         ron::de::from_reader(BufReader::new(Hist::get_file(false)))
-            .unwrap_or_else(|_| { println!("{}The history file is empty or has wrong ron syntax, try to delete it and try again.", "\x1b[31m"); std::process::exit(1) } )
+            .unwrap_or_else(|_| {
+                println!("{}The history file is empty or has wrong ron syntax, try to delete it and try again.", "\x1b[31m");
+                std::process::exit(1) 
+            })
     }
 
     pub fn ani_save(ani: Ani) {
@@ -44,7 +47,11 @@ impl Hist {
     pub fn man_save(man: Man) {
         let mut hist = Hist::deserialize();
 
-        let man = Man { all_chapters: vec![], chapter: man.all_chapters[man.all_chapters.iter().position(|x| x == &man.chapter).unwrap() + 1].clone(), ..man };
+        let man = Man {
+            all_chapters: vec![],
+            chapter: man.all_chapters[man.all_chapters.iter().position(|x| x == &man.chapter).unwrap() + 1].clone(),
+            ..man 
+        };
         match hist.man_data.iter().position(|x| x.name == man.name) {
             Some(pos) => hist.man_data[pos].chapter = man.chapter,
             None => hist.man_data.push(man) 
