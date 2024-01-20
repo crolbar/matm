@@ -268,28 +268,49 @@ fn get_sources(data_id: &str) -> Result<Sources, Box<dyn std::error::Error>> {
     } else { serde_json::from_str(response.as_str()).unwrap() };
 
 
-    let mut sub_source = String::new();
+    let mut subs = String::new();
     if let Some(english_sub) = 
         sources_json["tracks"]
             .as_array()
             .ok_or("Missing 'tracks' field")?
             .iter().find(|v| v["label"] == "English") 
     {
-        sub_source = english_sub["file"].as_str().unwrap_or_default().to_string();
+        subs = english_sub["file"].as_str().unwrap_or_default().to_string();
     };
 
-    let video_source = 
+    let video = 
         if sources_json["encrypted"].as_bool().unwrap() {
             let enc_video_url = sources_json["sources"].as_str().unwrap().to_string();
 
-            let url = 
-                format!(
-                    "http://crolbar.xyz/key/e{}",
-                    provider_url.path().split_once("e-").unwrap().1.chars().next().unwrap()
-                );
+            let (url, fallback_url) = {
+                let e = provider_url.path().split_once("e-").unwrap().1.chars().next().unwrap();
 
-            let key: Vec<Vec<u32>> = serde_json::from_str(&get_response(&url)
-                .expect("couldnt get key")).expect("couldnt deserialize string to vec");
+                (
+                    format!( "http://crolbar.xyz/key/e{}", e),
+                    format!( "https://raw.githubusercontent.com/AuraStar553/keys/e{}/key", e)
+                )
+            };
+
+            let key: Vec<Vec<u32>> = {
+                if let Ok(key) = &get_response(&url) {
+                    serde_json::from_str(key).expect("couldnt deserialize string to vec")
+                } else {
+                    let key: Vec<Vec<u32>> = serde_json::from_str(
+                        &get_response(&fallback_url).expect("couldn't get key")
+                    ).expect("couldnt deserialize string to vec");
+
+                    let mut sum = 0;
+                    let mut key = key;
+                    let init_key = key.clone();
+                    for (i, _) in init_key.iter().enumerate() {
+                        key[i][0] = init_key[i][0] + sum;
+                        sum += init_key[i][1];
+                        key[i][1] = init_key[i][0] + sum;
+                    }  
+
+                    key
+                }
+            };
 
             decrypt_url(enc_video_url, key)
         } else { 
@@ -300,10 +321,5 @@ fn get_sources(data_id: &str) -> Result<Sources, Box<dyn std::error::Error>> {
                 .to_string() 
         };
 
-    Ok(
-        Sources {
-            video: video_source,
-            subs: sub_source,
-        }
-    )
+    Ok(Sources{video, subs})
 }

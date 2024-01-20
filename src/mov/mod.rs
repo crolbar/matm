@@ -156,15 +156,14 @@ impl Mov {
         match get_sources(url) {
 
             Ok(sources) => {
-                let mut title = format!("{} Episode: {}", self.name, self.ep);
+                println!("{}Playing: {} Episode: {}", "\x1b[32m", self.name, self.ep);
 
-                if self.name.contains("(movie)") {
-                    title = format!("{}", self.name.split_once("(movie)").unwrap().0);
-                    println!("{}Playing: {}", "\x1b[32m", title) 
-                } else {
-                    title = title.split("(tv) ").collect::<String>();
-                    println!("{}Playing: {}", "\x1b[32m", title) 
-                }
+                let title = 
+                    if self.name.contains("(movie)") {
+                        self.name.split_once("(movie)").unwrap().0.to_string()
+                    } else {
+                        self.name.split("(tv) ").collect::<String>()
+                    };
 
                 if self.vlc {
                     Command::new("vlc")
@@ -264,7 +263,7 @@ impl Mov {
     }
 
     fn save_to_hist(&self) {
-        if !self.name.contains("(selfie)") {
+        if !self.name.contains("(movie)") {
             match self.ep + 1 > self.ep_ids.clone().unwrap().len() {
                 true => {
                     if Hist::deserialize().mov_data.iter().position(|x| x.name == self.name) != None {
@@ -316,14 +315,20 @@ fn get_sources(url: String) -> Result<Sources, Box<dyn std::error::Error>> {
     let video = if sources_json["encrypted"].as_bool().unwrap() {
         let enc_video_url = sources_json["sources"].as_str().unwrap().to_string();
 
-        let url = 
-            format!(
-                "http://zoro-keys.freeddns.org/keys/e{}/key.txt",
-                provider_url.path().split_once("embed-").unwrap().1.chars().next().unwrap()
-            );
+        let (url, fallback_url) = {
+            let e = provider_url.path().split_once("embed-").unwrap().1.chars().next().unwrap();
 
-        let key: Vec<Vec<u32>> = serde_json::from_str(&get_response(&url)
-            .expect("couldn't get key")).expect("couldnt deserialize string to vec");
+            (
+                format!( "http://crolbar.xyz/key/e{}", e),
+                format!( "http://zoro-keys.freeddns.org/keys/e{}/key.txt", e)
+            )
+        };
+
+        let key: Vec<Vec<u32>> = serde_json::from_str(
+            &get_response(&url)
+            .unwrap_or(
+                get_response(&fallback_url).expect("couldn't get key")
+            )).expect("couldnt deserialize vec");
 
         decrypt_url(enc_video_url, key)
     } else { 
