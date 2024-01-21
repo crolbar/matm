@@ -143,17 +143,30 @@ impl Mov {
     }
 
     fn get_movie_server_id(movie_id: &str, name: String) -> Self {
-        let response = get_response(&format!("https://flixhq.to/ajax/movie/episodes/{}", movie_id)).unwrap();
+        let url = format!("https://flixhq.to/ajax/movie/episodes/{}", movie_id);
+        let response = get_response(&url).unwrap();
         let page = Html::parse_document(&response);
 
-        let sel = Selector::parse("a").unwrap();
+        let a_sel = Selector::parse("a").unwrap();
 
-        let ep_ids: Option<Vec<String>> = Some(
-            page.select(&sel)
+        let ids: Vec<String> = 
+            page.select(&a_sel)
                 .map(|x| x.value().attr("data-linkid").unwrap().to_string())
-                .collect());
+                .collect();
 
+        let names: Vec<String> = 
+            page.select(&a_sel)
+                .map(|x| 
+                     x.select(&Selector::parse("span").unwrap())
+                        .map(|i| i.text().collect::<String>())
+                        .collect()
+                ).collect();
 
-        Self { ep_ids, season_id: None, ep: 1, name, ..Default::default()}
+        Self {  
+            name,
+            sel_provider: names[0].to_owned(),
+            providers: names.into_iter().zip(ids).collect(),
+            ..Default::default()
+        }
     }
 }

@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::io::BufReader;
 use crate::ani::Ani;
 use crate::mov::Mov;
 use crate::man::Man;
-use std::io::BufReader;
 use std::fs::File;
 
 pub enum DataType {
@@ -35,7 +36,14 @@ impl Hist {
     pub fn ani_save(ani: Ani) {
         let mut hist = Hist::deserialize();
 
-        let ani = Ani { ep_ids: None, ep: ani.ep + 1, ..ani };
+        let ani = Ani { 
+            ep_ids: None,
+            ep: ani.ep + 1,
+            sel_provider: String::new(),
+            providers: HashMap::new(),
+            ..ani
+        };
+
         match hist.ani_data.iter().position(|x| x.name == ani.name) {
             Some(pos) => hist.ani_data[pos].ep = ani.ep,
             None => hist.ani_data.push(ani) 
@@ -63,7 +71,13 @@ impl Hist {
     pub fn mov_save(mov: Mov) {
         let mut hist = Hist::deserialize();
 
-        let mov = Mov { ep_ids: None, ep: mov.ep + 1, ..mov };
+        let mov = Mov {
+            ep_ids: None,
+            ep: mov.ep + 1,
+            providers: HashMap::new(),
+            sel_provider: String::new(),
+            ..mov 
+        };
         match hist.mov_data.iter().position(|x| x.name == mov.name) {
             Some(pos) => hist.mov_data[pos].ep = mov.ep,
             None => hist.mov_data.push(mov) 

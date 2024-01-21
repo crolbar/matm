@@ -1,7 +1,7 @@
 use crate::utils::{get_sources_response, get_response, decrypt_url, Sources};
+use std::{process::Command, collections::HashMap};
 use serde::{Deserialize, Serialize};
 use crate::hist::{Hist, DataType};
-use std::process::Command;
 use scraper::Selector;
 use serde_json::Value;
 
@@ -11,9 +11,11 @@ pub fn search_movie_show(select_provider: bool, vlc: bool) -> std::io::Result<()
     let mut mov = Mov::select_movie_show(
         &get_query().replace(" ", "-")
     )?;
-    match select_provider {
-        true => mov.set_provider_index()?,
-        false => mov.provider_index = 0
+    if select_provider {
+        if !mov.name.contains("(movie)") {
+            mov.set_providers();
+        }
+        mov.select_provider()?
     }
     mov.vlc = vlc;
 
@@ -40,12 +42,12 @@ pub fn select_from_hist(select_provider: bool, vlc: bool) -> std::io::Result<()>
 
     let mut mov = hist.mov_data.iter().find(|m| m.name == name).unwrap().clone();
 
-    match select_provider {
-        true => mov.set_provider_index()?,
-        false => mov.provider_index = 0
+    mov.update_ep_ids();
+    if select_provider {
+        mov.set_providers();
+        mov.select_provider()?
     }
     mov.vlc = vlc;
-    mov.update_ep_ids();
 
     Ok(mov.main_loop()?)
 }
@@ -54,7 +56,8 @@ pub fn select_from_hist(select_provider: bool, vlc: bool) -> std::io::Result<()>
 pub struct Mov {
     pub ep_ids: Option<Vec<String>>,
     pub season_id: Option<usize>,
-    pub provider_index: usize,
+    pub sel_provider: String,
+    pub providers: HashMap<String, String>,
     pub name: String,
     pub ep: usize,
     pub vlc: bool,
@@ -70,9 +73,9 @@ impl Mov {
 
             if self.name.contains("(movie)") {
                 let select = selector::select(
-                    vec![String::from("search"),
-                        String::from("replay"),
+                    vec![String::from("replay"),
                         String::from("change provider"),
+                        String::from("search"),
                         String::from("quit")
                     ], Some(&self.name), err_msg 
                 )?;
@@ -83,7 +86,7 @@ impl Mov {
                         self = Mov::select_movie_show(&get_query().replace(" ", "-"))?;
                         self.play()
                     },
-                    "change provider" => self.set_provider_index()?,
+                    "change provider" => self.select_provider()?,
                     "quit" => std::process::exit(0),
                     _ => ()
                 }
@@ -120,7 +123,7 @@ impl Mov {
                             Some("select episode"), None
                         )?.parse().unwrap()
                     },
-                    "change provider" => self.set_provider_index()?,
+                    "change provider" => self.select_provider()?,
                     "search" => {
                         self = Self::select_movie_show(&get_query().replace(" ", "-")).unwrap();
                         self.play()
@@ -140,31 +143,22 @@ impl Mov {
     }
 
     fn play(&mut self) {
-        let url = 
-            match self.name.contains("movie") {
-                true => 
-                    format!(
-                        "https://flixhq.to/ajax/sources/{}",
-                        self.ep_ids.clone().unwrap()[self.provider_index]
-                    ),
-                false => 
-                    format!(
-                        "https://flixhq.to/ajax/sources/{}",
-                        self.get_ep_data_id()[self.provider_index]
-                    )
-            };
-        match get_sources(url) {
-
+        if !self.name.contains("(movie)") {
+            self.set_providers();
+        }
+        match get_sources(self.providers.get(&self.sel_provider).unwrap().to_owned()) {
             Ok(sources) => {
-                println!("{}Playing: {} Episode: {}", "\x1b[32m", self.name, self.ep);
-
                 let title = 
                     if self.name.contains("(movie)") {
                         self.name.split_once("(movie)").unwrap().0.to_string()
                     } else {
-                        self.name.split("(tv) ").collect::<String>()
+                        format!("{} Episode: {}",
+                            self.name.split("(tv) ").collect::<String>(),
+                            self.ep
+                        )
                     };
 
+                println!("{}Playing: {}", "\x1b[32m", title);
                 if self.vlc {
                     Command::new("vlc")
                             .args([
@@ -204,30 +198,57 @@ impl Mov {
         }
     }
 
-    fn set_provider_index(&mut self) -> std::io::Result<()> {
-        let range: Vec<String> = match self.name.contains("(movie)") {
-            true => 1..=self.ep_ids.clone().unwrap().len(),
-            false => 1..=self.get_ep_data_id().len()
-        }.map(|x| x.to_string()).collect();
-
-        self.provider_index = 
-            if range.len() > 1 {
-                selector::select(
-                    range,
-                    Some(
-                        "
-                            Change the provider server.
-                            (usualy the last ones are not supported)
-                            (if you havent changed it, it defaults to the first)
-                        "
-                    ), None
-                ).unwrap()
-                .parse::<usize>().unwrap_or_else(|_| {
-                    println!("{}Exiting...", "\x1b[33m");
-                    std::process::exit(0) 
-                }) - 1
-            } else { 0 };
+    fn select_provider(&mut self) -> std::io::Result<()> {
+        self.sel_provider = 
+            selector::select(
+                self.providers.keys().map(|i| i.to_owned()).collect(),
+                Some("Change the provider server. (supported once: Vidcloud, UpCloud)"), None
+            )?;
         Ok(())
+    }
+
+    fn set_providers(&mut self) {
+        let a_sel = Selector::parse("a").unwrap();
+        let url = format!( "https://flixhq.to/ajax/v2/episode/servers/{}",
+                self.ep_ids.clone().unwrap()[self.ep - 1]);
+        let response = get_response(&url).unwrap();
+        let provider_page = scraper::Html::parse_document(&response);
+
+        let ids: Vec<String> = 
+            provider_page
+                .select(&a_sel)
+                .map(|x| 
+                     x.value()
+                     .attr("data-id").unwrap()
+                     .to_string()
+                ).collect();
+
+        let names: Vec<String> =
+            provider_page
+                .select(&a_sel)
+                .map(|i| 
+                     i.select(&Selector::parse("span").unwrap())
+                        .map(|i| i.text().collect::<String>()).collect()
+                 ).collect();
+
+        if self.sel_provider.is_empty() {
+            self.sel_provider = names[0].to_owned();
+        }
+
+        self.providers = names.into_iter().zip(ids).collect();
+    }
+    
+    fn save_to_hist(&self) {
+        if !self.name.contains("(movie)") {
+            match self.ep + 1 > self.ep_ids.clone().unwrap().len() {
+                true => {
+                    if Hist::deserialize().mov_data.iter().position(|x| x.name == self.name) != None {
+                        Hist::remove(&self.name, DataType::MovData);
+                    }
+                },
+                false => Hist::mov_save(self.clone())
+            }
+        }
     }
 
     fn update_ep_ids(&mut self) {
@@ -249,31 +270,6 @@ impl Mov {
             .map(|x| x.value().attr("data-id").unwrap().to_string())
         .collect())
     }
-
-    // these are the providers for the episode. self.ep_ids are the ids of all episodes
-    fn get_ep_data_id(&self) -> Vec<String> {
-        let a_sel = Selector::parse("a").unwrap();
-        let response = get_response(
-            &format!( "https://flixhq.to/ajax/v2/episode/servers/{}",
-                self.ep_ids.clone().unwrap()[self.ep - 1])
-        ).unwrap();
-        let provider_page = scraper::Html::parse_document(&response);
-
-        provider_page.select(&a_sel).map(|x| x.value().attr("data-id").unwrap().to_string()).collect()
-    }
-
-    fn save_to_hist(&self) {
-        if !self.name.contains("(movie)") {
-            match self.ep + 1 > self.ep_ids.clone().unwrap().len() {
-                true => {
-                    if Hist::deserialize().mov_data.iter().position(|x| x.name == self.name) != None {
-                        Hist::remove(&self.name, DataType::MovData);
-                    }
-                },
-                false => Hist::mov_save(self.clone())
-            }
-        }
-    }
 }
 
 fn get_query() -> String {
@@ -285,7 +281,8 @@ fn get_query() -> String {
     query
 }
 
-fn get_sources(url: String) -> Result<Sources, Box<dyn std::error::Error>> {
+fn get_sources(data_id: String) -> Result<Sources, Box<dyn std::error::Error>> {
+    let url = format!("https://flixhq.to/ajax/sources/{}", data_id);
     let provider: Value = serde_json::from_str(&get_response(&url)?)?;
     let provider_url = url::Url::parse(provider["link"].as_str().ok_or("Missing 'link' field")?)?;
 

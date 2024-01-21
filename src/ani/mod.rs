@@ -1,17 +1,17 @@
 use crate::utils::{get_response, decrypt_url, Sources};
+use std::{process::Command, collections::HashMap};
 use serde::{Deserialize, Serialize};
 use crate::hist::{Hist, DataType};
 use scraper::{Html, Selector};
-use std::process::Command;
 use serde_json::Value;
 mod ani_select;
 
 pub fn search_anime(select_provider: bool, is_dub: bool) -> std::io::Result<()> {
     let mut ani = Ani::select_anime(&get_query())?;
 
-    match select_provider {
-        true => ani.set_provider_index()?,
-        false => ani.provider_index = 0
+    if select_provider {
+        ani.set_providers();
+        ani.select_provider()?
     }
     ani.is_dub = is_dub;
 
@@ -36,13 +36,12 @@ pub fn select_from_hist(select_provider: bool, is_dub: bool) -> std::io::Result<
 
     let mut ani = hist.ani_data.iter().find(|x| x.name == name).unwrap().clone();
 
-    match select_provider {
-        true => ani.set_provider_index()?,
-        false => ani.provider_index = 0
+    ani.update_ep_ids();
+    if select_provider {
+        ani.set_providers();
+        ani.select_provider()?
     }
     ani.is_dub = is_dub;
-
-    ani.update_ep_ids();
 
     Ok(ani.main_loop()?)
 }
@@ -53,7 +52,8 @@ pub struct Ani {
     pub name: String,
     pub ep: usize,
     pub id: usize,
-    pub provider_index: usize,
+    pub sel_provider: String,
+    pub providers: HashMap<String, String>,
     pub is_dub: bool,
 }
 
@@ -105,7 +105,7 @@ impl Ani {
                 },
                 "switch to sub" => self.is_dub = false,
                 "switch to dub" => self.is_dub = true,
-                "change provider" => self.set_provider_index()?,
+                "change provider" => self.select_provider()?,
                 "search" => {
                     *self = Ani::select_anime(&get_query())?;
                     self.play()
@@ -124,15 +124,8 @@ impl Ani {
     }
 
     fn play(&mut self) {
-        let mut data_ids = self.get_ep_data_ids();
-
-        if self.provider_index >= data_ids.len() {
-            self.is_dub = false;
-            println!("{}This episode dosnt have an dubbed version", "\x1b[31m");
-            data_ids = self.get_ep_data_ids()
-        }
-
-        match get_sources(&data_ids[self.provider_index]) {
+        self.set_providers();
+        match get_sources(&self.providers.get(&self.sel_provider).unwrap()) {
             Ok(sources) => {
                 if sources.subs.is_empty() {
                     println!("{}Could't find subtitles", "\x1b[31m");
@@ -165,26 +158,20 @@ impl Ani {
         }
     }
 
-    fn set_provider_index(&mut self) -> std::io::Result<()> {
-        self.provider_index = 
+    fn select_provider(&mut self) -> std::io::Result<()> {
+        self.sel_provider = 
                 selector::select(
-                    (1..=self.get_ep_data_ids().len()).map(|x| x.to_string()).collect(),
-                    Some(
-                        "
-                            Change the provider server.
-                            (usualy the last ones are not supported)
-                            (if you havent changed it, it defaults to the first)
-                        "
-                    ), None
-                )?
-                .parse::<usize>().unwrap_or_else(|_| {
-                    println!("{}Exiting...", "\x1b[33m");
-                    std::process::exit(0) 
-                }) - 1;
+                    self.providers.keys().map(|n|n.to_owned()).collect(),
+                    Some("Change the provider server. (supported ones: Vidstreaming, MegaCloud)"), None
+                )?;
+        if self.sel_provider.is_empty() {
+            println!("{}Exiting...", "\x1b[33m");
+            std::process::exit(0) 
+        }
         Ok(())
     }
 
-    fn get_ep_data_ids(&self) -> Vec<String> {
+    fn set_providers(&mut self) {
         let ep_id = self.ep_ids.clone().unwrap()[self.ep.clone() - 1];
 
         let video_type = if self.is_dub {"dub"} else {"sub"};
@@ -193,18 +180,38 @@ impl Ani {
             &format!("https://aniwatch.to/ajax/v2/episode/servers?episodeId={}", ep_id)
         ).unwrap();
 
-        let provider_list: Vec<String> =
-            response.split(format!("data-type=\\\"{}\\\" data-id=\\\"", video_type).as_str()).skip(1)
-                .map(|x| x.split_once("\\\"\\n").unwrap().0.to_string())
-                .collect();
-
-        if provider_list.is_empty() {
-            response.split(format!("data-type=\\\"{}\\\" data-id=\\\"", "raw").as_str()).skip(1)
-                .map(|x| x.split_once("\\\"\\n").unwrap().0.to_string())
-                .collect()
-        } else {
-            provider_list
+        let mut pattern = format!("data-type=\\\"{}\\\" data-id=\\\"", video_type);
+        
+        if !response.contains(&pattern) && self.is_dub {
+            println!("{}This episode doesn't have an dubbed version. Playing with subs", "\x1b[31m");
+            pattern = pattern.replace("dub", "sub");
+            self.is_dub = false;
         }
+
+        if !response.contains(&pattern) {
+            let video_type = if self.is_dub {"dub"} else {"sub"};
+            pattern = pattern.replace(video_type, "raw");
+        }
+
+        let provider_info = response.split(&pattern).skip(1);
+
+        let ids: Vec<String> = 
+            provider_info.clone()
+            .map(|x| x.split_once("\\\"\\n").unwrap().0.to_string())
+            .collect();
+
+        let names: Vec<String> =
+            provider_info
+            .map(|x| x
+                 .split_once("</a>").unwrap().0.to_string()
+                 .rsplit_once(">").unwrap().1.to_string()
+            ).collect();
+
+        if self.sel_provider.is_empty() {
+            self.sel_provider = names[0].to_owned();
+        }
+
+        self.providers = names.into_iter().zip(ids).collect();
     }
 
     fn save_to_hist(&self) {
@@ -287,7 +294,7 @@ fn get_sources(data_id: &str) -> Result<Sources, Box<dyn std::error::Error>> {
 
                 (
                     format!( "http://crolbar.xyz/key/e{}", e),
-                    format!( "https://raw.githubusercontent.com/AuraStar553/keys/e{}/key", e)
+                    format!( "https://raw.githubusercontent.com/theonlymo/keys/e{}/key", e)
                 )
             };
 
