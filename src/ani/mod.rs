@@ -127,29 +127,29 @@ impl Ani {
         self.set_providers();
         match get_sources(&self.providers.get(&self.sel_provider).unwrap()) {
             Ok(sources) => {
-                if sources.subs.is_empty() {
-                    println!("{}Could't find subtitles", "\x1b[31m");
-                    println!("{}Playing: {} Ep: {}", "\x1b[32m", self.name, self.ep);
-                    Command::new("mpv")
-                        .args([
+                println!("{}Playing: {} Ep: {}", "\x1b[32m", self.name, self.ep);
+                let args = 
+                    if sources.subs.is_empty() {
+                        println!("{}Could't find subtitles", "\x1b[31m");
+
+                        vec![
                             sources.video,
                             format!("--force-media-title={} Episode {}", self.name, self.ep),
                             String::from("--fs")
-                        ])
-                        .spawn().expect("crashed when trying to start mpv")
-                        .wait().unwrap();
-                } else {
-                    println!("{}Playing: {} Ep: {}", "\x1b[32m", self.name, self.ep);
-                    Command::new("mpv")
-                        .args([
+                        ]
+                    } else {
+                        vec![
                             sources.video,
                             format!("--sub-file={}",sources.subs),
                             format!("--force-media-title={} Episode {}", self.name, self.ep),
                             String::from("--fs")
-                        ])
-                        .spawn().expect("crashed when trying to start mpv")
-                        .wait().unwrap();
-                }
+                        ]
+                    };
+
+                Command::new("mpv")
+                    .args(args)
+                    .spawn().expect("crashed when trying to start mpv")
+                    .wait().unwrap();
             }
             Err(e) => {
                 println!("{}Error while trying to get sources: {}", "\x1b[31m", e);

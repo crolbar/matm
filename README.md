@@ -23,6 +23,8 @@ Install from the AUR
 yay -S matm-bin
 ```
 if the release dosnt work there is a git version `matm-git`
+- the histroy file is in `~/.local/state/matm`
+- the cache dir for manga is `~/.cache/matm`
 
 ## Windows
 no
