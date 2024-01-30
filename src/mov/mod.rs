@@ -54,12 +54,16 @@ pub fn select_from_hist(select_provider: bool, vlc: bool) -> std::io::Result<()>
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct Mov {
-    pub ep_ids: Option<Vec<String>>,
-    pub season_id: Option<usize>,
-    pub sel_provider: String,
-    pub providers: HashMap<String, String>,
+    #[serde(skip)]
+    pub ep_ids: Vec<String>,
+    pub season_id: usize,
     pub name: String,
     pub ep: usize,
+    #[serde(skip)]
+    pub sel_provider: String,
+    #[serde(skip)]
+    pub providers: HashMap<String, String>,
+    #[serde(skip)]
     pub vlc: bool,
 }
 
@@ -107,7 +111,7 @@ impl Mov {
                     "play next" => {
                         self.ep += 1;
 
-                        if self.ep > self.ep_ids.clone().unwrap().len() {
+                        if self.ep > self.ep_ids.len() {
                             println!("{}Episode out of bound", "\x1b[31m");
                             std::process::exit(0) 
                         } 
@@ -119,7 +123,7 @@ impl Mov {
                     "previous" => self.ep -= 1,
                     "select ep" => {
                         self.ep = selector::select(
-                            (1..=self.ep_ids.clone().unwrap().len()).map(|x| x.to_string()).collect(),
+                            (1..=self.ep_ids.len()).map(|x| x.to_string()).collect(),
                             Some("select episode"), None
                         )?.parse().unwrap()
                     },
@@ -133,7 +137,7 @@ impl Mov {
                 }
 
                 if 
-                    self.ep > self.ep_ids.clone().unwrap().len() ||
+                    self.ep > self.ep_ids.len() ||
                     self.ep == 0
                 {
                     err_msg = Some("Episode out of bound");
@@ -210,7 +214,7 @@ impl Mov {
     fn set_providers(&mut self) {
         let a_sel = Selector::parse("a").unwrap();
         let url = format!( "https://flixhq.to/ajax/v2/episode/servers/{}",
-                self.ep_ids.clone().unwrap()[self.ep - 1]);
+                self.ep_ids[self.ep - 1]);
         let response = get_response(&url).unwrap();
         let provider_page = scraper::Html::parse_document(&response);
 
@@ -240,7 +244,7 @@ impl Mov {
     
     fn save_to_hist(&self) {
         if !self.name.contains("(movie)") {
-            match self.ep + 1 > self.ep_ids.clone().unwrap().len() {
+            match self.ep + 1 > self.ep_ids.len() {
                 true => {
                     if Hist::deserialize().mov_data.iter().position(|x| x.name == self.name) != None {
                         Hist::remove(&self.name, DataType::MovData);
@@ -255,7 +259,7 @@ impl Mov {
         let a_sel = Selector::parse("a").unwrap();
         let response = 
             if let Ok(resp) = get_response(
-                &format!("https://flixhq.to/ajax/v2/season/episodes/{}", self.season_id.unwrap())
+                &format!("https://flixhq.to/ajax/v2/season/episodes/{}", self.season_id)
             ) {
                 resp
             } else {
@@ -264,11 +268,11 @@ impl Mov {
             };
         let episodes_page = scraper::Html::parse_document(&response);
 
-        self.ep_ids = Some(
+        self.ep_ids = 
             episodes_page
             .select(&a_sel)
             .map(|x| x.value().attr("data-id").unwrap().to_string())
-        .collect())
+        .collect()
     }
 }
 

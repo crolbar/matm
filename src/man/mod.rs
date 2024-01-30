@@ -45,6 +45,7 @@ pub fn select_from_hist() -> std::io::Result<()> {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Man {
+    #[serde(skip)]
     pub all_chapters: Vec<f32>,
     pub chapter: f32,
     pub url_id: String,

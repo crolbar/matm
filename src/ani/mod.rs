@@ -48,12 +48,16 @@ pub fn select_from_hist(select_provider: bool, is_dub: bool) -> std::io::Result<
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Ani {
-    pub ep_ids: Option<Vec<u32>>,
+    #[serde(skip)]
+    pub ep_ids: Vec<u32>,
     pub name: String,
     pub ep: usize,
     pub id: usize,
+    #[serde(skip)]
     pub sel_provider: String,
+    #[serde(skip)]
     pub providers: HashMap<String, String>,
+    #[serde(skip)]
     pub is_dub: bool,
 }
 
@@ -83,7 +87,7 @@ impl Ani {
                 "play next" => {
                     self.ep += 1;
                     
-                    if self.ep > self.ep_ids.clone().unwrap().len() {
+                    if self.ep > self.ep_ids.len() {
                         println!("{}Episode out of bound", "\x1b[31m");
                         std::process::exit(0) 
                     }
@@ -95,7 +99,7 @@ impl Ani {
                 "previous" => self.ep = self.ep.saturating_sub(1),
                 "select ep" => {
                     self.ep = selector::select(
-                        (1..=self.ep_ids.clone().unwrap().len()).map(|x| x.to_string()).collect(),
+                        (1..=self.ep_ids.len()).map(|x| x.to_string()).collect(),
                         None, None
                     )?.parse()
                         .unwrap_or_else(|_| {
@@ -115,7 +119,7 @@ impl Ani {
             }
 
             if 
-                self.ep > self.ep_ids.clone().unwrap().len() ||
+                self.ep > self.ep_ids.len() ||
                 self.ep == 0
             {
                 err_msg = Some("Episode out of bound");
@@ -172,7 +176,7 @@ impl Ani {
     }
 
     fn set_providers(&mut self) {
-        let ep_id = self.ep_ids.clone().unwrap()[self.ep.clone() - 1];
+        let ep_id = self.ep_ids[self.ep.clone() - 1];
 
         let video_type = if self.is_dub {"dub"} else {"sub"};
 
@@ -215,7 +219,7 @@ impl Ani {
     }
 
     fn save_to_hist(&self) {
-        match self.ep + 1 > self.ep_ids.clone().unwrap().len() {
+        match self.ep + 1 > self.ep_ids.len() {
             true => {
                 if let Some(_) = Hist::deserialize().ani_data.iter().position(|x| x.name == self.name)  {
                     Hist::remove(&self.name, DataType::AniData);
@@ -239,13 +243,11 @@ impl Ani {
         let ep_sel = Selector::parse("a.ssl-item").unwrap();
 
         self.ep_ids = 
-            Some(
-                episodes_html.select(&ep_sel)
-                    .map(|x| x.value()
-                         .attr("data-id").unwrap()
-                         .parse::<u32>().unwrap()
-                    ).collect()
-            )
+            episodes_html.select(&ep_sel)
+                .map(|x| x.value()
+                     .attr("data-id").unwrap()
+                     .parse::<u32>().unwrap()
+                ).collect()
     }
 }
 

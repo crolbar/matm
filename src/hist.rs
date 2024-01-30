@@ -37,10 +37,7 @@ impl Hist {
         let mut hist = Hist::deserialize();
 
         let ani = Ani { 
-            ep_ids: None,
             ep: ani.ep + 1,
-            sel_provider: String::new(),
-            providers: HashMap::new(),
             ..ani
         };
 
@@ -56,8 +53,7 @@ impl Hist {
         let mut hist = Hist::deserialize();
 
         let man = Man {
-            all_chapters: vec![],
-            chapter: man.all_chapters[man.all_chapters.iter().position(|x| x == &man.chapter).unwrap() + 1].clone(),
+            chapter: man.all_chapters[man.all_chapters.iter().position(|x| x == &man.chapter).unwrap() + 1],
             ..man 
         };
         match hist.man_data.iter().position(|x| x.name == man.name) {
@@ -72,10 +68,7 @@ impl Hist {
         let mut hist = Hist::deserialize();
 
         let mov = Mov {
-            ep_ids: None,
             ep: mov.ep + 1,
-            providers: HashMap::new(),
-            sel_provider: String::new(),
             ..mov 
         };
         match hist.mov_data.iter().position(|x| x.name == mov.name) {

@@ -82,12 +82,12 @@ impl Ani {
         let episodes_html = Html::parse_document(episodes_json["html"].as_str().unwrap());
         let ep_sel = Selector::parse("a.ssl-item").unwrap();
 
-        let ep_ids: Option<Vec<u32>> = Some(
+        let ep_ids: Vec<u32> = 
             episodes_html.select(&ep_sel).map(|el| {
                 el.value()
                     .attr("data-id").unwrap()
                     .parse::<u32>().unwrap()
-            }).collect());
+            }).collect();
 
         let ep = selector::select(
             (1..=episodes_json["totalItems"].as_u64().unwrap()).map(|x| x.to_string()).collect(),
