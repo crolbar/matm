@@ -24,9 +24,9 @@ pub fn select_from_hist(select_provider: bool, is_dub: bool) -> std::io::Result<
     let name = 
         selector::select(
             hist.ani_data
-            .iter()
-            .map(|x| format!("{} Episode: {}", x.name, x.ep))
-            .collect(),
+                .iter()
+                .map(|x| format!("{} Episode: {}", x.name, x.ep))
+                .collect(),
             None, None
             )?.split_once(" Episode")
         .unwrap_or_else(|| {
@@ -289,16 +289,16 @@ fn get_sources(data_id: &str) -> Result<Sources, Box<dyn std::error::Error>> {
         if sources_json["encrypted"].as_bool().unwrap() {
             let enc_video_url = sources_json["sources"].as_str().unwrap().to_string();
 
-            let (url, fallback_url) = {
-                let e = provider_url.path().split_once("e-").unwrap().1.chars().next().unwrap();
-
-                (
-                    format!( "http://crolbar.xyz/key/e{}", e),
-                    format!( "https://raw.githubusercontent.com/theonlymo/keys/e{}/key", e)
-                )
-            };
-
             let key: Vec<Vec<u32>> = {
+                let (url, fallback_url) = {
+                    let e = provider_url.path().split_once("e-").unwrap().1.chars().next().unwrap();
+
+                    (
+                        format!( "http://crolbar.xyz/key/e{}", e),
+                        format!( "https://raw.githubusercontent.com/AuraStar553/keys/e{}/key", e)
+                    )
+                };
+
                 if let Ok(key) = &get_response(&url) {
                     serde_json::from_str(key).expect("couldnt deserialize string to vec")
                 } else {
