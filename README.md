@@ -67,14 +67,14 @@ rm -rf matm
 #### Usage
 - `mpv`
 - `zathura-cb`
-- `fzf`
+- `fzf` (for versions before 2.0)
 #### Make
 - `git`
 - `cargo`
 
 ### AUR packages:
 ```
-yay -S --needed mpv zathura-cb fzf git cargo
+yay -S --needed mpv zathura-cb git cargo
 ```
 
 # Usage
