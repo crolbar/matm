@@ -92,7 +92,8 @@ pub async fn get_sources_response(url: &str,) -> Result<String, reqwest::Error> 
     )
 }
 
-pub fn decrypt_url(url: String, key: Vec<Vec<u32>>) -> String {
+/// 0 is url, 1 is key
+pub fn extract_key(url: String, key: Vec<Vec<u32>>) -> (String, String) {
     let mut extracted_key = String::new();
     let mut enc_url: Vec<char> = url.chars().collect();
      
@@ -102,11 +103,33 @@ pub fn decrypt_url(url: String, key: Vec<Vec<u32>>) -> String {
             enc_url[j as usize] = ' '
         }
     }
-    let enc_url_without_key: String = enc_url.iter().filter(|&&c| !c.is_whitespace()).collect();
 
+    (
+        enc_url.iter().filter(|&&c| !c.is_whitespace()).collect(),
+        extracted_key
+    )
+}
+
+pub fn get_e4_key() -> String {
+    use base64::{Engine, engine::general_purpose::STANDARD};
+    use serde_json::Value;
+
+    let keys: Vec<u8> = {
+        let resp = get_response("https://keys4.fun").unwrap();
+
+        serde_json::de::from_str::<Value>(&resp).unwrap()
+            ["rabbitstream"].as_object().unwrap()
+            ["keys"].as_array().unwrap().iter()
+                .map(|i| i.as_u64().unwrap() as u8).collect()
+    };
+
+    STANDARD.encode(keys)
+}
+
+pub fn decrypt_url(enc_url: String, extracted_key: String) -> String {
     let cmd = format!(
         "echo {} | base64 -d | openssl enc -aes-256-cbc -d -md md5 -k {} | sed -nE 's_.*\"file\":\"([^\"]*)\".*_\\1_p'",
-        enc_url_without_key, extracted_key
+        enc_url, extracted_key
     );
 
     let output = std::process::Command::new("sh")

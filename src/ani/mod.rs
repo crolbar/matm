@@ -1,4 +1,4 @@
-use crate::utils::{get_response, decrypt_url, Sources};
+use crate::utils::{get_response, decrypt_url, Sources, extract_key};
 use std::{process::Command, collections::HashMap};
 use serde::{Deserialize, Serialize};
 use crate::hist::{Hist, DataType};
@@ -321,7 +321,8 @@ fn get_sources(data_id: &str) -> Result<Sources, Box<dyn std::error::Error>> {
                 }
             };
 
-            decrypt_url(enc_video_url, key)
+            let url_key = extract_key(enc_video_url, key);
+            decrypt_url(url_key.0, url_key.1)
         } else { 
             sources_json["sources"]
                 .as_array().unwrap()

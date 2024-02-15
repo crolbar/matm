@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::io::BufReader;
 use crate::ani::Ani;
 use crate::mov::Mov;

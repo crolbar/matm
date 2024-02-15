@@ -1,4 +1,4 @@
-use crate::utils::{get_sources_response, get_response, decrypt_url, Sources};
+use crate::utils::{get_sources_response, get_response, decrypt_url, Sources, extract_key, get_e4_key};
 use std::{process::Command, collections::HashMap};
 use serde::{Deserialize, Serialize};
 use crate::hist::{Hist, DataType};
@@ -315,23 +315,29 @@ fn get_sources(data_id: String) -> Result<Sources, Box<dyn std::error::Error>> {
 
     let video = if sources_json["encrypted"].as_bool().unwrap() {
         let enc_video_url = sources_json["sources"].as_str().unwrap().to_string();
+        let e = provider_url.path().split_once("embed-").unwrap().1.chars().next().unwrap();
+        let url_key = 
+            if e != '4' {
+                let (url, fallback_url) = {
 
-        let (url, fallback_url) = {
-            let e = provider_url.path().split_once("embed-").unwrap().1.chars().next().unwrap();
+                    (
+                        format!( "http://crolbar.xyz/key/e{}", e),
+                        format!( "http://zoro-keys.freeddns.org/keys/e{}/key.txt", e)
+                    )
+                };
 
-            (
-                format!( "http://crolbar.xyz/key/e{}", e),
-                format!( "http://zoro-keys.freeddns.org/keys/e{}/key.txt", e)
-            )
-        };
+                let key: Vec<Vec<u32>> = serde_json::from_str(
+                    &get_response(&url)
+                    .unwrap_or(
+                        get_response(&fallback_url).expect("couldn't get key")
+                        )).expect("couldnt deserialize vec");
 
-        let key: Vec<Vec<u32>> = serde_json::from_str(
-            &get_response(&url)
-            .unwrap_or(
-                get_response(&fallback_url).expect("couldn't get key")
-            )).expect("couldnt deserialize vec");
+                extract_key(enc_video_url, key)
+            } else {
+                (enc_video_url, get_e4_key())
+            };
 
-        decrypt_url(enc_video_url, key)
+        decrypt_url(url_key.0, url_key.1)
     } else { 
         sources_json["sources"]
             .as_array().unwrap()[0]
