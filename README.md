@@ -156,7 +156,7 @@ or if you are using the git version `matm-git`
 ### Manual
 you can just remove the binary file
 ```
-sudo rm /usr/bin/matm
+sudo rm $(which matm)
 ```
 
 # Credits
