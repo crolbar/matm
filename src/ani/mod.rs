@@ -6,7 +6,7 @@ use scraper::{Html, Selector};
 use serde_json::Value;
 mod ani_select;
 
-pub fn search_anime(select_provider: bool, is_dub: bool) -> std::io::Result<()> {
+pub fn search_anime(select_provider: bool, is_dub: bool, autoplay: bool) -> std::io::Result<()> {
     let mut ani = Ani::select_anime(&get_query())?;
 
     if select_provider {
@@ -14,11 +14,12 @@ pub fn search_anime(select_provider: bool, is_dub: bool) -> std::io::Result<()> 
         ani.select_provider()?
     }
     ani.is_dub = is_dub;
+    ani.autoplay = autoplay;
 
     Ok(ani.main_loop()?)
 }
 
-pub fn select_from_hist(select_provider: bool, is_dub: bool) -> std::io::Result<()> {
+pub fn select_from_hist(select_provider: bool, is_dub: bool, autoplay: bool) -> std::io::Result<()> {
     let hist = Hist::deserialize();
 
     let name = 
@@ -42,6 +43,7 @@ pub fn select_from_hist(select_provider: bool, is_dub: bool) -> std::io::Result<
         ani.select_provider()?
     }
     ani.is_dub = is_dub;
+    ani.autoplay = autoplay;
 
     Ok(ani.main_loop()?)
 }
@@ -59,6 +61,8 @@ pub struct Ani {
     pub providers: HashMap<String, String>,
     #[serde(skip)]
     pub is_dub: bool,
+    #[serde(skip)]
+    pub autoplay: bool,
 }
 
 impl Ani {
@@ -68,62 +72,75 @@ impl Ani {
 
         loop {
             self.save_to_hist();
-            
-            let select = selector::select(
-                vec![String::from("play next"),
-                    String::from("play"),
-                    String::from("next"),
-                    String::from("previous"),
-                    String::from("select ep"),
-                    format!("switch to {}", if self.is_dub {"sub"} else {"dub"}),
-                    String::from("change provider"),
-                    String::from("search"),
-                    String::from("quit")
-                ], 
-                Some(&format!("Current ep - {} of {}", self.ep, self.name)), err_msg
-            )?;
 
-            match select.as_str() {
-                "play next" => {
-                    self.ep += 1;
-                    
-                    if self.ep > self.ep_ids.len() {
-                        println!("{}Episode out of bound", "\x1b[31m");
-                        std::process::exit(0) 
-                    }
+            if self.autoplay {
+                self.ep += 1;
 
-                    self.play();
-                },
-                "play" => self.play(),
-                "next" => self.ep += 1,
-                "previous" => self.ep = self.ep.saturating_sub(1),
-                "select ep" => {
-                    self.ep = selector::select(
-                        (1..=self.ep_ids.len()).map(|x| x.to_string()).collect(),
-                        None, None
-                    )?.parse()
-                        .unwrap_or_else(|_| {
-                            println!("{}Exiting...", "\x1b[33m");
+                if self.ep > self.ep_ids.len() {
+                    println!("{}Episode out of bound", "\x1b[31m");
+                    std::process::exit(0) 
+                }
+
+                self.play();
+            } else {
+                let select = selector::select(
+                    vec![String::from("play next"),
+                        String::from("play"),
+                        String::from("next"),
+                        String::from("previous"),
+                        String::from("select ep"),
+                        format!("switch to {}", if self.is_dub {"sub"} else {"dub"}),
+                        String::from("change provider"),
+                        String::from("autoplay"),
+                        String::from("search"),
+                        String::from("quit")
+                    ], 
+                    Some(&format!("Current ep - {} of {}", self.ep, self.name)), err_msg
+                )?;
+
+                match select.as_str() {
+                    "play next" => {
+                        self.ep += 1;
+                        
+                        if self.ep > self.ep_ids.len() {
+                            println!("{}Episode out of bound", "\x1b[31m");
                             std::process::exit(0) 
-                        })
-                },
-                "switch to sub" => self.is_dub = false,
-                "switch to dub" => self.is_dub = true,
-                "change provider" => self.select_provider()?,
-                "search" => {
-                    *self = Ani::select_anime(&get_query())?;
-                    self.play()
-                },
-                "quit" => std::process::exit(0),
-                _ => ()
-            }
+                        }
 
-            if 
-                self.ep > self.ep_ids.len() ||
-                self.ep == 0
-            {
-                err_msg = Some("Episode out of bound");
-            } else { err_msg = None }
+                        self.play();
+                    },
+                    "play" => self.play(),
+                    "next" => self.ep += 1,
+                    "previous" => self.ep = self.ep.saturating_sub(1),
+                    "select ep" => {
+                        self.ep = selector::select(
+                            (1..=self.ep_ids.len()).map(|x| x.to_string()).collect(),
+                            None, None
+                        )?.parse()
+                            .unwrap_or_else(|_| {
+                                println!("{}Exiting...", "\x1b[33m");
+                                std::process::exit(0) 
+                            })
+                    },
+                    "switch to sub" => self.is_dub = false,
+                    "switch to dub" => self.is_dub = true,
+                    "change provider" => self.select_provider()?,
+                    "autoplay" => self.autoplay = true,
+                    "search" => {
+                        *self = Ani::select_anime(&get_query())?;
+                        self.play()
+                    },
+                    "quit" => std::process::exit(0),
+                    _ => ()
+                }
+
+                if 
+                    self.ep > self.ep_ids.len() ||
+                    self.ep == 0
+                {
+                    err_msg = Some("Episode out of bound");
+                } else { err_msg = None }
+            }
         }
     }
 
@@ -163,11 +180,17 @@ impl Ani {
     }
 
     fn select_provider(&mut self) -> std::io::Result<()> {
+        let mut p = self.providers.keys()
+            .filter(|i| *i == "Vidstreaming" || *i == "MegaCloud")
+            .map(|i| i.to_owned())
+            .collect::<Vec<String>>();
+        p.sort();
+
         self.sel_provider = 
                 selector::select(
-                    self.providers.keys().map(|n|n.to_owned()).collect(),
-                    Some("Change the provider server. (supported ones: Vidstreaming, MegaCloud)"), None
+                    p ,Some("Change the provider server. (default one is probably Vidstreaming)"), None
                 )?;
+        
         if self.sel_provider.is_empty() {
             println!("{}Exiting...", "\x1b[33m");
             std::process::exit(0) 

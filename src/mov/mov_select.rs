@@ -1,8 +1,6 @@
 use crate::utils::get_response;
-use std::collections::HashMap;
 use scraper::{Html, Selector};
 use crate::mov::Mov;
-
 
 impl Mov {
     pub fn select_movie_show(query: &str) -> std::io::Result<Self> {
@@ -21,14 +19,14 @@ impl Mov {
         let search_page = Html::parse_document(&response);
         let search_results = search_page.select(&div_sel);
 
-        let mut movie_search_results: HashMap<String, &str> = HashMap::new();
-        for result in search_results {
-            for element in result.select(&detail_sel) {
+        let (names, ids): (Vec<String>, Vec<&str>) = 
+            search_results.flat_map(|result| result.select(&detail_sel))
+            .map(|element| {
                 let a_elem = element.select(&a_sel).next().unwrap().value();
 
                 let last_info_elem = element.select(&info_sel).last().unwrap().text().collect::<Vec<_>>().join("");
 
-                movie_search_results.insert(
+                (
                     format!("{} ({}) ({})",
                         a_elem.attr("title").unwrap(),
 
@@ -45,20 +43,19 @@ impl Mov {
                                 }
                         }
                     ),
+                    
 
                     a_elem.attr("href").unwrap().rsplit_once('-').unwrap().1
-                );
-            }
-        }
+                )
+            }).unzip();
 
-        if movie_search_results.is_empty() {
+        if names.is_empty() {
             println!("{}No results found", "\x1b[31m");
             std::process::exit(0)
         }
 
         let name = selector::select(
-            movie_search_results.iter().map(|(name, _)| name.to_string()).collect(),
-            None, None
+            names.clone(), None, None
         ).unwrap();
 
         if name.is_empty() {
@@ -66,8 +63,7 @@ impl Mov {
             std::process::exit(0)
         } 
 
-        let movie_id = movie_search_results.get(&name).unwrap();
-
+        let movie_id = ids[names.iter().position(|i| *i == name).unwrap()];
         Ok(
             if name.contains("movie") {
                 Mov::get_movie_server_id(

@@ -7,7 +7,7 @@ use serde_json::Value;
 
 mod mov_select;
 
-pub fn search_movie_show(select_provider: bool, vlc: bool) -> std::io::Result<()> {
+pub fn search_movie_show(select_provider: bool, vlc: bool, autoplay: bool) -> std::io::Result<()> {
     let mut mov = Mov::select_movie_show(
         &get_query().replace(" ", "-")
     )?;
@@ -18,11 +18,12 @@ pub fn search_movie_show(select_provider: bool, vlc: bool) -> std::io::Result<()
         mov.select_provider()?
     }
     mov.vlc = vlc;
+    mov.autoplay = autoplay;
 
     Ok(mov.main_loop()?)
 }
 
-pub fn select_from_hist(select_provider: bool, vlc: bool) -> std::io::Result<()> {
+pub fn select_from_hist(select_provider: bool, vlc: bool, autoplay: bool) -> std::io::Result<()> {
     let hist = Hist::deserialize();
 
     let name = 
@@ -48,6 +49,7 @@ pub fn select_from_hist(select_provider: bool, vlc: bool) -> std::io::Result<()>
         mov.select_provider()?
     }
     mov.vlc = vlc;
+    mov.autoplay = autoplay;
 
     Ok(mov.main_loop()?)
 }
@@ -65,6 +67,8 @@ pub struct Mov {
     pub providers: HashMap<String, String>,
     #[serde(skip)]
     pub vlc: bool,
+    #[serde(skip)]
+    pub autoplay: bool,
 }
 
 impl Mov {
@@ -75,73 +79,86 @@ impl Mov {
         loop {
             self.save_to_hist();
 
-            if self.name.contains("(movie)") {
-                let select = selector::select(
-                    vec![String::from("replay"),
-                        String::from("change provider"),
-                        String::from("search"),
-                        String::from("quit")
-                    ], Some(&self.name), err_msg 
-                )?;
+            if self.autoplay {
+                self.ep += 1;
 
-                match select.as_str() {
-                    "replay" => self.play(),
-                    "search" => {
-                        self = Mov::select_movie_show(&get_query().replace(" ", "-"))?;
-                        self.play()
-                    },
-                    "change provider" => self.select_provider()?,
-                    "quit" => std::process::exit(0),
-                    _ => ()
-                }
+                if self.ep > self.ep_ids.len() {
+                    println!("{}Episode out of bound", "\x1b[31m");
+                    std::process::exit(0) 
+                } 
+
+                self.play();
             } else {
-                let select = selector::select(
-                    vec![String::from("play next"),
-                        String::from("play"),
-                        String::from("next"),
-                        String::from("previous"),
-                        String::from("select ep"),
-                        String::from("change provider"),
-                        String::from("search"),
-                        String::from("quit")
-                    ], Some(&format!("Current ep - {} of {}", self.ep, self.name)), err_msg 
-                )?;
+                if self.name.contains("(movie)") {
+                    let select = selector::select(
+                        vec![String::from("replay"),
+                            String::from("change provider"),
+                            String::from("search"),
+                            String::from("quit")
+                        ], Some(&self.name), err_msg 
+                    )?;
 
-                match select.as_str() {
-                    "play next" => {
-                        self.ep += 1;
-
-                        if self.ep > self.ep_ids.len() {
-                            println!("{}Episode out of bound", "\x1b[31m");
-                            std::process::exit(0) 
-                        } 
-
-                        self.play();
+                    match select.as_str() {
+                        "replay" => self.play(),
+                        "search" => {
+                            self = Mov::select_movie_show(&get_query().replace(" ", "-"))?;
+                            self.play()
+                        },
+                        "change provider" => self.select_provider()?,
+                        "quit" => std::process::exit(0),
+                        _ => ()
                     }
-                    "play" => self.play(),
-                    "next" => self.ep += 1,
-                    "previous" => self.ep -= 1,
-                    "select ep" => {
-                        self.ep = selector::select(
-                            (1..=self.ep_ids.len()).map(|x| x.to_string()).collect(),
-                            Some("select episode"), None
-                        )?.parse().unwrap()
-                    },
-                    "change provider" => self.select_provider()?,
-                    "search" => {
-                        self = Self::select_movie_show(&get_query().replace(" ", "-")).unwrap();
-                        self.play()
-                    },
-                    "quit" => std::process::exit(0),
-                    _ => ()
-                }
+                } else {
+                    let select = selector::select(
+                        vec![String::from("play next"),
+                            String::from("play"),
+                            String::from("next"),
+                            String::from("previous"),
+                            String::from("select ep"),
+                            String::from("change provider"),
+                            String::from("autoplay"),
+                            String::from("search"),
+                            String::from("quit")
+                        ], Some(&format!("Current ep - {} of {}", self.ep, self.name)), err_msg 
+                    )?;
 
-                if 
-                    self.ep > self.ep_ids.len() ||
-                    self.ep == 0
-                {
-                    err_msg = Some("Episode out of bound");
-                } else { err_msg = None }
+                    match select.as_str() {
+                        "play next" => {
+                            self.ep += 1;
+
+                            if self.ep > self.ep_ids.len() {
+                                println!("{}Episode out of bound", "\x1b[31m");
+                                std::process::exit(0) 
+                            } 
+
+                            self.play();
+                        }
+                        "play" => self.play(),
+                        "next" => self.ep += 1,
+                        "previous" => self.ep -= 1,
+                        "select ep" => {
+                            self.ep = selector::select(
+                                (1..=self.ep_ids.len()).map(|x| x.to_string()).collect(),
+                                Some("select episode"), None
+                            )?.parse().unwrap()
+                        },
+                        "change provider" => self.select_provider()?,
+                        "autoplay" => self.autoplay = true,
+                        "search" => {
+                            self = Self::select_movie_show(&get_query().replace(" ", "-")).unwrap();
+                            self.play()
+                        },
+                        "quit" => std::process::exit(0),
+                        _ => ()
+                    }
+
+                    if 
+                        self.ep > self.ep_ids.len() ||
+                        self.ep == 0
+                    {
+                        err_msg = Some("Episode out of bound");
+                    } else { err_msg = None }
+                }
             }
         }
     }
@@ -203,10 +220,15 @@ impl Mov {
     }
 
     fn select_provider(&mut self) -> std::io::Result<()> {
+        let mut p = self.providers.keys()
+            .filter(|i| *i == "Vidcloud" || *i == "UpCloud")
+            .map(|i| i.to_owned())
+            .collect::<Vec<String>>();
+        p.sort();
+
         self.sel_provider = 
             selector::select(
-                self.providers.keys().map(|i| i.to_owned()).collect(),
-                Some("Change the provider server. (supported once: Vidcloud, UpCloud)"), None
+                p, Some("Change the provider server. (default one is probably upcloud)"), None
             )?;
         Ok(())
     }

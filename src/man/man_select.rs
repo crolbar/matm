@@ -1,7 +1,6 @@
-use std::collections::HashMap;
-use crate::man::Man;
 use crate::utils::get_response;
 use scraper::{Html, Selector};
+use crate::man::Man;
 
 impl Man {
     pub fn select_manga(query: &str) -> std::io::Result<Man> {
@@ -18,7 +17,7 @@ impl Man {
 
         let search_page = Html::parse_document(&response);
 
-        let name_url_map: HashMap<String, String> = 
+        let names: Vec<(String, String)> = 
             search_page.select(&div_sel).map(|i| {
                 let a_elem = i.select(&h3_sel).next().unwrap().select(&a_sel).next().unwrap();
 
@@ -29,25 +28,29 @@ impl Man {
             }).collect();
 
 
-        if name_url_map.is_empty() {
+        if names.is_empty() {
             println!("{}No results found", "\x1b[31m");
             std::process::exit(0)
         }
 
         let name = selector::select(
-            name_url_map.iter().map(|x| x.0.clone()).collect(),
+            names.iter().map(|x| x.0.clone()).collect(),
             None, None
         )?;
         if name.is_empty() { std::process::exit(0) }
 
 
-        let name_url = name_url_map.get_key_value(&name).unwrap();
+        let (url_id, name) = {
+            let n = names.iter().find(|i| *i.0 == name).unwrap();
+
+            (n.1.to_string(), n.0.to_string())
+        };
 
         let mut man = Self { 
             all_chapters: vec![],
-            url_id: name_url.1.to_string(),
-            name: name_url.0.to_string(),
             chapter: 0.0,
+            url_id,
+            name,
         };
         man.get_all_chapters();
 

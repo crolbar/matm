@@ -1,5 +1,4 @@
 use crate::utils::get_response;
-use std::collections::HashMap;
 use scraper::{Html, Selector};
 use serde_json::Value;
 use crate::ani::Ani;
@@ -11,9 +10,10 @@ impl Ani {
         let num_eps_sel = Selector::parse("div.tick-item").unwrap();
         let link_sel = Selector::parse("a.dynamic-name").unwrap();
 
-        let mut anime_result: HashMap<String, String>= HashMap::new();
+        let mut names: Vec<String> = Vec::new();
+        let mut ids: Vec<String> = Vec::new();
 
-        for page_num in 0..=5 { 
+        for page_num in 1..=5 { 
             let url = format!("https://aniwatch.to/search?keyword={}&page={}", query, page_num);
             let response = get_response(&url)
                 .unwrap_or_else(|_| {
@@ -31,30 +31,29 @@ impl Ani {
                 let link = element.select(&link_sel).next().unwrap();
                 let mut name = link.text().collect::<Vec<_>>().join("");
 
-                if anime_result.iter().find(|i| i.1 == &name).is_some() {
+                if  names.contains(&name) {
                     let num_of_eps_div = element.select(&num_eps_sel).next().unwrap();
                     let num_of_eps = num_of_eps_div.text().collect::<String>();
                     name.push_str(format!(" (EPS: {})", num_of_eps).as_str());
                 }
 
-                anime_result.insert(
+                names.push(name);
+                ids.push(
                     link.value().attr("href").unwrap()
                     .split('-').last().unwrap()
-                    .split_once('?').unwrap().0.to_string(),
-
-                    name
+                    .split_once('?').unwrap().0.to_string()
                 );
             }
         }
 
-        if anime_result.is_empty() {
+        if names.is_empty() {
             println!("{}No results found", "\x1b[31m");
             std::process::exit(0)
         }
 
         let name = 
             selector::select(
-                anime_result.iter().map(|x| x.1.to_string()).collect(),
+                names.iter().map(|x| x.to_string()).collect(),
                 None, None
             )?;
 
@@ -65,10 +64,8 @@ impl Ani {
 
         Ok(
             Self::select_episode(
-                anime_result.iter()
-                .find(|i| i.1 == &name).unwrap().0
-                .to_string()
-                .parse().unwrap(),
+                ids[names.iter().position(|i| *i == name).unwrap()]
+                    .parse().unwrap(),
                 name
             )?
           )

@@ -17,16 +17,20 @@ pub enum Comms {
         c: bool,
 
         /// Delete history
-        #[clap(short, long)]
+        #[clap(long)]
         delete: bool,
 
-        /// Select the provider after you have selected the episode (if not selected it defaults to the first one)
+        /// Select the provider
         #[clap(short, long)]
         select_provider: bool,
 
-        /// Watch dubbed
-        #[clap(long)]
+        /// Watch dubbed version
+        #[clap(short, long)]
         dub: bool,
+    
+        /// Autoplay next episode (you can stop it by basically hiting ctrl+c in the cli)
+        #[clap(short, long)]
+        autoplay: bool,
     },
     
     /// Read manga (ma for short)
@@ -56,13 +60,17 @@ pub enum Comms {
         #[clap(short, long)]
         delete: bool,
 
-        /// Select the provider after you have selected the episode/movie (if not selected it defaults to the first one)
+        /// Select the provider
         #[clap(short, long)]
         select_provider: bool,
 
         /// Use vlc instead of mpv (not recommended)
         #[clap(short, long)]
-        vlc: bool
+        vlc: bool,
+
+        /// Autoplay next episode (you can stop it by basically hiting ctrl+c in the cli)
+        #[clap(short, long)]
+        autoplay: bool,
     },
 }
 

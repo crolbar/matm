@@ -14,10 +14,10 @@ fn main() -> std::io::Result<()> {
     match args {
         Matm { comm: Some(comm) } => {
             match comm {
-                Comms::Ani { c, delete, select_provider, dub } => {
+                Comms::Ani { c, delete, select_provider, dub , autoplay} => {
                     if delete { Hist::delete_hist(DataType::AniData) }
-                    else if c { ani::select_from_hist(select_provider, dub)? }
-                    else { ani::search_anime(select_provider, dub)? }
+                    else if c { ani::select_from_hist(select_provider, dub, autoplay)? }
+                    else { ani::search_anime(select_provider, dub, autoplay)? }
                 }
 
                 Comms::Man {c, delete, clean } =>{
@@ -27,10 +27,10 @@ fn main() -> std::io::Result<()> {
                     else { man::search_manga()? }
                 }
 
-                Comms::Mov { c, delete, select_provider, vlc } => {
+                Comms::Mov { c, delete, select_provider, vlc, autoplay } => {
                     if delete {  Hist::delete_hist(DataType::MovData) }
-                    else if c { mov::select_from_hist(select_provider, vlc)? }
-                    else { mov::search_movie_show(select_provider, vlc)? }
+                    else if c { mov::select_from_hist(select_provider, vlc, autoplay)? }
+                    else { mov::search_movie_show(select_provider, vlc, autoplay)? }
                 }
             }
         },
@@ -46,9 +46,9 @@ fn main() -> std::io::Result<()> {
             )?.as_str() 
 
             {
-                "watch anime" => ani::search_anime(false, false)?,
+                "watch anime" => ani::search_anime(false, false, false)?,
                 "read manga" => man::search_manga()?,
-                "watch movie/tv show" => mov::search_movie_show(false, false)?,
+                "watch movie/tv show" => mov::search_movie_show(false, false, false)?,
                 _ => ()
             }
        }
