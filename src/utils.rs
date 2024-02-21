@@ -41,7 +41,7 @@ pub enum Comms {
         c: bool,
 
         /// Delete history
-        #[clap(short, long)]
+        #[clap(long)]
         delete: bool,
 
         /// Delete cache
@@ -57,7 +57,7 @@ pub enum Comms {
         c: bool,
 
         /// Delete history
-        #[clap(short, long)]
+        #[clap(long)]
         delete: bool,
 
         /// Select the provider
