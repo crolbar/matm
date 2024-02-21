@@ -9,7 +9,6 @@ pub fn update(app: &mut Selector, tui: &mut Tui) -> Result<()> {
 
             if 
                 key.modifiers == KeyModifiers::CONTROL && key.code == KeyCode::Char('c') ||
-                key.modifiers == KeyModifiers::CONTROL && key.code == KeyCode::Char('z') ||
                 key.modifiers == KeyModifiers::ALT && key.code == KeyCode::Char('q') ||
                 key.code == KeyCode::Esc
             {

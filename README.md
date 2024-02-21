@@ -48,7 +48,7 @@ cd target/release
 ./matm
 ```
 
-If you get "permission denied" make sure it binary is executable
+If you get "permission denied" make sure the binary is executable
 ```
 chmod +x matm
 ```
@@ -143,6 +143,15 @@ matm ma --clean
 ```
 matm ma --help
 ```
+</details><details><summary><b>Selector</summary>
+
+- Exit: `Esc`, `Alt + q`, `ctrl + c`
+- Up: `arrow-up`, `alt + k`, `shift + tab`, `scrollup`
+- Down: `arrow-down`, `alt + j`, `tab`, `scrolldown``
+- Top: `PageUp`, `Home`, `alt + g`
+- Bottom: `PageDown`, `End`, `alt + shift + g`
+- Select: `Enter`, `double left click`
+
 </details>
 
 # Uninstall
@@ -154,9 +163,14 @@ or if you are using the git version `matm-git`
 
 
 ### Manual
-you can just remove the binary file
+you can basically remove the binary file
 ```
 sudo rm $(which matm)
+```
+and state and cache folders
+```
+rm -rf ~/.local/state/matm
+rm -rf ~/.cache/matm
 ```
 
 # Credits
