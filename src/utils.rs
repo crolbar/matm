@@ -118,40 +118,53 @@ pub fn extract_key(url: String, key: Vec<Vec<u32>>) -> (String, String) {
     )
 }
 
-pub fn get_e4_key() -> String {
-    use base64::{Engine, engine::general_purpose::STANDARD};
-    use serde_json::Value;
+use base64::{Engine, engine::general_purpose::STANDARD};
+use serde_json::Value;
 
-    let keys: Vec<u8> = {
+pub fn get_e4_key() -> String {
+    let k: Vec<u8> = {
         let resp = get_response("https://keys4.fun").unwrap();
 
-        serde_json::de::from_str::<Value>(&resp).unwrap()
+        serde_json::from_str::<Value>(&resp).unwrap()
             ["rabbitstream"].as_object().unwrap()
             ["keys"].as_array().unwrap().iter()
                 .map(|i| i.as_u64().unwrap() as u8).collect()
     };
-
-    STANDARD.encode(keys)
+    STANDARD.encode(k)
 }
 
-pub fn decrypt_url(enc_url: String, extracted_key: String) -> String {
-    let cmd = format!(
-        "echo {} | base64 -d | openssl enc -aes-256-cbc -d -md md5 -k {} | sed -nE 's_.*\"file\":\"([^\"]*)\".*_\\1_p'",
-        enc_url, extracted_key
-    );
+pub fn decrypt_url(enc_sources: String, extracted_key: String) -> String {
+    use openssl::{symm::{decrypt, Cipher}, hash::{hash, MessageDigest}};
 
-    let output = std::process::Command::new("sh")
-        .arg("-c")
-        .arg(cmd)
-        .output()
-        .expect("Failed to decrypt url");
+    let key = {
+        let md5 = |input: &[u8]| hash(MessageDigest::md5(), input).unwrap();
 
-    let decrypted_source = String::from_utf8(output.stdout).expect("Failed to convert to string");
+        let s = &STANDARD.decode(&enc_sources).unwrap()[8..16];
+        let p = extracted_key.as_bytes();
+        
+        let mut tmp_key = md5(&[&p[..], &s[..]].concat());
+        let mut key = tmp_key.clone().to_vec();
+        
+        while key.len() < 48 {
+            tmp_key = md5(&[&tmp_key[..], &p[..], &s[..]].concat());
+            key.extend(tmp_key.to_vec())
+        }
 
-    if !decrypted_source.starts_with("http") {
-        println!("{}Could't decrypt video source url", "\x1b[31m");
+        key
+    };
+
+    let d = decrypt(
+        Cipher::aes_256_cbc(),
+        &key[..32], Some(&key[32..]),
+        &STANDARD.decode(enc_sources).unwrap()[16..].to_vec()
+    ).unwrap_or_else(|_| {
+        println!("{}Bad decrypt (either aniwatch/flixhd is down or the keys aren't updated)", "\x1b[31m");
         std::process::exit(1)
-    }
+    });
 
-    decrypted_source
+    serde_json::from_str::<Value>(&String::from_utf8(d).unwrap()).unwrap()
+        .as_array().unwrap()[0]
+        .as_object().unwrap()
+        ["file"].as_str().unwrap()
+        .to_string() 
 }
