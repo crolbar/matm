@@ -310,20 +310,24 @@ fn get_query() -> String {
 fn get_sources(data_id: String) -> Result<Sources, Box<dyn std::error::Error>> {
     let url = format!("https://flixhq.to/ajax/sources/{}", data_id);
     let provider: Value = serde_json::from_str(&get_response(&url)?)?;
-    let provider_url = url::Url::parse(provider["link"].as_str().ok_or("Missing 'link' field")?)?;
+    let provider_url = provider["link"].as_str().ok_or("Missing 'link' field")?;
+
+    let embed_type = provider_url.split_once("embed-").unwrap().1.chars().next().unwrap();
 
     let url = format!("https://{}/ajax/embed-{}/getSources?id={}",
-        provider_url.host_str().unwrap(),
-        provider_url.path().split_once("embed-").unwrap().1.chars().next().unwrap(),
-        provider_url.path().rsplit('/').next().unwrap()
+        provider_url.split_once("https://").unwrap().1.split_once('/').unwrap().0,
+        embed_type,
+        provider_url.rsplit_once("/").unwrap().1.split_once("?").unwrap().0
     );
     let response = get_sources_response(&url)?;
     
     
-    let sources_json: Value = if serde_json::from_str::<Value>(&response).is_err() {
+    let sources_json: Value = if serde_json::from_str::<Value>(&response).is_ok() {
+        serde_json::from_str(&response).unwrap()
+    } else { 
         println!("{}Couldn't deserialize sources page. Maybe the provier server is down?", "\x1b[31m");
         std::process::exit(1)
-    } else { serde_json::from_str(&response).unwrap() };
+    };
 
     let mut subs = String::new();
     if let Some(english_sub) =
@@ -338,14 +342,13 @@ fn get_sources(data_id: String) -> Result<Sources, Box<dyn std::error::Error>> {
     let video = 
         if sources_json["encrypted"].as_bool().unwrap() {
             let enc_sources = sources_json["sources"].as_str().unwrap().to_string();
-            let e = provider_url.path().split_once("embed-").unwrap().1.chars().next().unwrap();
             let url_key = 
-                if e != '4' {
+                if embed_type != '4' {
                     let (url, fallback_url) = {
 
                         (
-                            format!( "http://crolbar.xyz/key/e{}", e),
-                            format!( "http://zoro-keys.freeddns.org/keys/e{}/key.txt", e)
+                            format!( "http://crolbar.xyz/key/e{}", embed_type),
+                            format!( "http://zoro-keys.freeddns.org/keys/e{}/key.txt", embed_type)
                         )
                     };
 

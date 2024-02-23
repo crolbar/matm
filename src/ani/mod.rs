@@ -286,18 +286,22 @@ fn get_query() -> String {
 fn get_sources(data_id: &str) -> Result<Sources, Box<dyn std::error::Error>> {
     let url = format!("https://aniwatch.to/ajax/v2/episode/sources?id={}", data_id);
     let provider: Value = serde_json::from_str(&get_response(&url)?)?;
-    let provider_url = url::Url::parse(provider["link"].as_str().ok_or("Missing 'link' field")?)?;
+    let provider_url = provider["link"].as_str().ok_or("Missing 'link' field")?;
+
+    let embed_type = provider_url.split_once("e-").unwrap().1.chars().next().unwrap();
 
     let url = format!("https://{}/embed-2/ajax/e-1/getSources?id={}",
-        provider_url.host_str().unwrap(),
-        provider_url.path().rsplit('/').next().unwrap()
+        provider_url.split_once("https://").unwrap().1.split_once('/').unwrap().0,
+        provider_url.rsplit_once("/").unwrap().1.split_once("?").unwrap().0
     );
     let response = get_response(&url)?;
 
-    let sources_json: Value = if serde_json::from_str::<Value>(response.as_str()).is_err() {
+    let sources_json: Value = if serde_json::from_str::<Value>(response.as_str()).is_ok() {
+        serde_json::from_str(response.as_str()).unwrap() 
+    } else {
         println!("{}Couldn't deserialize sources page. Maybe the provier server is down?", "\x1b[31m");
         std::process::exit(1)
-    } else { serde_json::from_str(response.as_str()).unwrap() };
+    };
 
 
     let mut subs = String::new();
@@ -316,11 +320,9 @@ fn get_sources(data_id: &str) -> Result<Sources, Box<dyn std::error::Error>> {
 
             let key: Vec<Vec<u32>> = {
                 let (url, fallback_url) = {
-                    let e = provider_url.path().split_once("e-").unwrap().1.chars().next().unwrap();
-
                     (
-                        format!( "http://crolbar.xyz/key/e{}", e),
-                        format!( "https://raw.githubusercontent.com/AuraStar553/keys/e{}/key", e)
+                        format!( "http://crolbar.xyz/key/e{}", embed_type),
+                        format!( "https://raw.githubusercontent.com/AuraStar553/keys/e{}/key", embed_type)
                     )
                 };
 
