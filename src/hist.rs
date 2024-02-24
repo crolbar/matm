@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::io::BufReader;
+use std::path::PathBuf;
 use crate::ani::Ani;
 use crate::mov::Mov;
 use crate::man::Man;
@@ -16,7 +17,6 @@ pub struct Hist {
     pub ani_data: Vec<Ani>,
     pub mov_data: Vec<Mov>,
     pub man_data: Vec<Man>
-
 }
 
 impl Hist {
@@ -89,7 +89,12 @@ impl Hist {
     }
 
     fn get_file(is_ser: bool) -> File {
-        let dir_path = dirs::home_dir().unwrap().join(".local/state/matm");
+
+        #[cfg(target_os = "linux")]
+        let dir_path = dirs::state_dir().unwrap().join("matm");
+        #[cfg(target_os = "windows")]
+        let dir_path = dirs::data_dir().unwrap().join("matm");
+
         let file_path = dir_path.join("hist.ron");
 
         if File::open(&file_path).is_err() {

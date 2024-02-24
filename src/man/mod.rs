@@ -85,8 +85,8 @@ impl Man {
                 },
                 "reload" => 
                     std::fs::remove_file(
-                        dirs::home_dir().unwrap()
-                            .join(format!(".cache/matm/{}-{}.cbz", self.name, self.chapter))
+                        dirs::cache_dir().unwrap()
+                            .join(format!("matm/{}-{}.cbz", self.name, self.chapter))
                     ).unwrap(),
                 "previous" => {
                     if self.chapter <= 0.0 { 
@@ -118,9 +118,9 @@ impl Man {
 
         std::process::Command::new("zathura")
             .args([
-                dirs::home_dir().unwrap()
+                dirs::cache_dir().unwrap()
                     .join(
-                        format!(".cache/matm/{}-{}.cbz", self.name, self.chapter)
+                        format!("matm/{}-{}.cbz", self.name, self.chapter)
                     ).to_str().unwrap(),
                "--mode=fullscreen"
             ])
@@ -129,12 +129,12 @@ impl Man {
 
 
     fn create_cbz(&self) {
-        let home_dir = dirs::home_dir().unwrap();
+        let cache_dir = dirs::cache_dir().unwrap();
 
         if 
             std::fs::metadata(
-                home_dir.join(
-                    format!(".cache/matm/{}-{}.cbz", self.name, self.chapter)
+                cache_dir.join(
+                    format!("matm/{}-{}.cbz", self.name, self.chapter)
                 )
             ).is_err() 
         {
@@ -162,8 +162,8 @@ impl Man {
             get_imgs(img_urls);
             
             std::fs::rename(
-                home_dir.join(".cache/matm/false.cbz"),
-                home_dir.join(format!(".cache/matm/{}-{}.cbz", self.name, self.chapter))
+                cache_dir.join("matm/false.cbz"),
+                cache_dir.join(format!("matm/{}-{}.cbz", self.name, self.chapter))
             ).unwrap()
         }
     }
@@ -225,7 +225,7 @@ async fn get_imgs(img_urls: Vec<String>) {
         std::sync::Arc::new(
             std::sync::Mutex::new(
                 ZipWriter::new(
-                    File::create(dirs::home_dir().unwrap().join(".cache/matm/false.cbz")).unwrap()
+                    File::create(dirs::cache_dir().unwrap().join("matm/false.cbz")).unwrap()
                 )
             )
         );
@@ -258,19 +258,19 @@ async fn get_imgs(img_urls: Vec<String>) {
 
 
 pub fn delete_cache() {
-    std::fs::remove_dir_all(dirs::home_dir().unwrap().join(".cache/matm")).unwrap();
-    std::fs::create_dir(dirs::home_dir().unwrap().join(".cache/matm")).unwrap();
+    std::fs::remove_dir_all(dirs::cache_dir().unwrap().join("matm")).unwrap();
+    std::fs::create_dir(dirs::cache_dir().unwrap().join("matm")).unwrap();
     println!("{}Cache cleared", "\x1b[34m")
 }
 
 fn check_missing_dirs() {
-    let home_dir = dirs::home_dir().unwrap();
+    let cache_dir = dirs::cache_dir().unwrap();
 
-    if std::fs::metadata(home_dir.join(".cache/matm")).is_err() { 
-        std::fs::create_dir_all(home_dir.join(".cache/matm")).unwrap() 
+    if std::fs::metadata(cache_dir.join("matm")).is_err() { 
+        std::fs::create_dir_all(cache_dir.join("matm")).unwrap() 
     }
 
-    if std::fs::metadata(home_dir.join(".cache/matm/false.cbz")).is_ok() {
-        std::fs::remove_file(home_dir.join(".cache/matm/false.cbz")).unwrap() 
+    if std::fs::metadata(cache_dir.join("matm/false.cbz")).is_ok() {
+        std::fs::remove_file(cache_dir.join("matm/false.cbz")).unwrap() 
     }
 }
