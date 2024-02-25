@@ -2,19 +2,22 @@ use serde::{Deserialize, Serialize};
 use std::io::BufReader;
 use crate::ani::Ani;
 use crate::mov::Mov;
+#[cfg(target_os = "linux")]
 use crate::man::Man;
 use std::fs::File;
 
 pub enum DataType {
     AniData,
     MovData,
+    #[cfg(target_os = "linux")]
     ManData
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Hist {
     pub ani_data: Vec<Ani>,
     pub mov_data: Vec<Mov>,
+    #[cfg(target_os = "linux")]
     pub man_data: Vec<Man>
 }
 
@@ -47,6 +50,7 @@ impl Hist {
         hist.serialize()
     }
 
+    #[cfg(target_os = "linux")]
     pub fn man_save(man: Man) {
         let mut hist = Hist::deserialize();
 
@@ -82,6 +86,7 @@ impl Hist {
         match dt {
             DataType::AniData => { hist.ani_data.remove(hist.ani_data.iter().position(|x| x.name == name).unwrap()); },
             DataType::MovData => { hist.mov_data.remove(hist.mov_data.iter().position(|x| x.name == name).unwrap()); },
+            #[cfg(target_os = "linux")]
             DataType::ManData => { hist.man_data.remove(hist.man_data.iter().position(|x| x.name == name).unwrap()); },
         }
         hist.serialize()
@@ -99,7 +104,7 @@ impl Hist {
         if File::open(&file_path).is_err() {
             if !dir_path.exists() { std::fs::create_dir_all(&dir_path).unwrap() }
             File::create(&file_path).unwrap();
-            Hist { ani_data: vec![], mov_data: vec![], man_data: vec![] }.serialize()
+            Hist::default().serialize() 
         }
 
         match is_ser {
@@ -113,6 +118,7 @@ impl Hist {
         match dt {
             DataType::AniData => hist.ani_data.clear(),
             DataType::MovData => hist.mov_data.clear(),
+            #[cfg(target_os = "linux")]
             DataType::ManData => hist.man_data.clear(),
         }
         hist.serialize();

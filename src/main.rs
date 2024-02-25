@@ -4,7 +4,10 @@ use clap::Parser;
 
 mod utils;
 mod hist;
+
+#[cfg(target_os = "linux")]
 mod man;
+
 mod mov;
 mod ani;
 
@@ -49,6 +52,7 @@ fn main() -> std::io::Result<()> {
 
             {
                 "watch anime" => ani::search_anime(false, false, false)?,
+                #[cfg(target_os = "linux")]
                 "read manga" => man::search_manga()?,
                 "watch movie/tv show" => mov::search_movie_show(false, false, false)?,
                 _ => ()
