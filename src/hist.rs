@@ -93,6 +93,8 @@ impl Hist {
     }
 
     fn get_file(is_ser: bool) -> File {
+
+        #[cfg(not(target_os = "windows"))]
         let dir_path = dirs::state_dir().unwrap().join("matm");
 
         #[cfg(target_os = "windows")]

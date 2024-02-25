@@ -160,7 +160,7 @@ pub fn decrypt_url(enc_sources: String, extracted_key: String) -> String {
         &key[..32], Some(&key[32..]),
         &STANDARD.decode(enc_sources).unwrap()[16..].to_vec()
     ).unwrap_or_else(|_| {
-        println!("{}Bad decrypt (either aniwatch/flixhd is down or the keys aren't updated)", "\x1b[31m");
+        println!("{}Bad decrypt (either aniwatch/flixhd is down or the keys aren't updated){}", "\x1b[31m", "\x1b[0m");
         std::process::exit(1)
     });
 

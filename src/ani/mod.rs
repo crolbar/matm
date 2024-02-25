@@ -149,34 +149,47 @@ impl Ani {
         match get_sources(&self.providers.get(&self.sel_provider).unwrap()) {
             Ok(sources) => {
                 println!("{}Playing: {} Ep: {}", "\x1b[32m", self.name, self.ep);
-                let args = 
-                    if sources.subs.is_empty() {
-                        println!("{}Could't find subtitles", "\x1b[31m");
+                #[cfg(not(target_os = "android"))]
+                {
+                    let args = 
+                        if sources.subs.is_empty() {
+                            println!("{}Could't find subtitles", "\x1b[31m");
 
+                            vec![
+                                format!("{}", sources.video),
+                                format!("--force-media-title={} Episode: {}", self.name, self.ep),
+                                String::from("--fs"),
+                            ]
+                        } else {
+                            vec![
+                                format!("{}", sources.video),
+                                format!("--sub-file={}", sources.subs),
+                                format!("--force-media-title={} Episode: {}", self.name, self.ep),
+                                String::from("--fs"),
+                            ]
+                        };
+
+                    Command::new("mpv")
+                        .args(args)
+                        .spawn().expect("crashed trying to start mpv")
+                        .wait().unwrap();
+                }
+
+                #[cfg(target_os = "android")]
+                {
+                    let args = {
                         format!(
-                            "mpv \"{}\" --force-media-title=\"{} Episode: {}\" --fs",
-                            sources.video, self.name, self.ep
-                        )
-                    } else {
-                        format!(
-                            "mpv \"{}\" --sub-file={} --force-media-title=\"{} Episode: {}\" -fs",
-                            sources.video, sources.subs, self.name, self.ep
+                            "am start -a android.intent.action.VIEW -n is.xyz.mpv/.MPVActivity -d \"{}\" >/dev/null",
+                            sources.video 
                         )
                     };
 
-                #[cfg(target_os = "android")]
-                let args = {
-                    format!(
-                        "am start -a android.intent.action.VIEW -n is.xyz.mpv/.MPVActivity -d \"{}\" >/dev/null",
-                        sources.video 
-                    )
-                };
-
-                Command::new("sh")
-                    .arg("-c")
-                    .arg(args)
-                    .spawn().expect("crashed trying to start mpv")
-                    .wait().unwrap();
+                    Command::new("sh")
+                        .arg("-c")
+                        .arg(args)
+                        .spawn().expect("crashed trying to start mpv")
+                        .wait().unwrap();
+                }
             }
             Err(e) => {
                 println!("{}Error while trying to get sources: {}", "\x1b[31m", e);

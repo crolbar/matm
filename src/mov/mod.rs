@@ -188,34 +188,48 @@ impl Mov {
                             ]).spawn().expect("crashed trying to start vlc")
                             .wait().unwrap();
                 } else {
-                    let args = 
-                        if sources.subs.is_empty() {
-                            println!("{}Could't find subtitles", "\x1b[31m");
 
+                    #[cfg(not(target_os = "android"))]
+                    {
+                        let args = 
+                            if sources.subs.is_empty() {
+                                println!("{}Could't find subtitles", "\x1b[31m");
+
+                                vec![
+                                    format!("{}", sources.video),
+                                    format!("--force-media-title={}", title),
+                                    String::from("--fs"),
+                                ]
+                            } else {
+                                vec![
+                                    format!("{}", sources.video),
+                                    format!("--sub-file={}", sources.subs),
+                                    format!("--force-media-title={}", title),
+                                    String::from("--fs"),
+                                ]
+                            };
+
+                        Command::new("mpv")
+                            .args(args)
+                            .spawn().expect("crashed trying to start mpv")
+                            .wait().unwrap();
+                    }
+
+                    #[cfg(target_os = "android")]
+                    {
+                        let args = {
                             format!(
-                                "mpv \"{}\" --force-media-title=\"{}\" --fs",
-                                sources.video, title
-                            )
-                        } else {
-                            format!(
-                                "mpv \"{}\" --sub-file={} --force-media-title=\"{}\" -fs",
-                                sources.video, sources.subs, title
+                                "am start -a android.intent.action.VIEW -n is.xyz.mpv/.MPVActivity -d \"{}\" >/dev/null",
+                                sources.video 
                             )
                         };
 
-                    #[cfg(target_os = "android")]
-                    let args = {
-                        format!(
-                            "am start -a android.intent.action.VIEW -n is.xyz.mpv/.MPVActivity -d \"{}\" >/dev/null",
-                            sources.video 
-                        )
-                    };
-
-                    Command::new("sh")
-                        .arg("-c")
-                        .arg(args)
-                        .spawn().expect("crashed trying to start mpv")
-                        .wait().unwrap();
+                        Command::new("sh")
+                            .arg("-c")
+                            .arg(args)
+                            .spawn().expect("crashed trying to start mpv")
+                            .wait().unwrap();
+                    }
                 }
             }
             Err(e) => {
