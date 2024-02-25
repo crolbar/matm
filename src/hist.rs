@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::io::BufReader;
-use std::path::PathBuf;
 use crate::ani::Ani;
 use crate::mov::Mov;
 use crate::man::Man;

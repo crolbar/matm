@@ -33,6 +33,8 @@ pub enum Comms {
         autoplay: bool,
     },
     
+
+    #[cfg(target_os = "linux")]
     /// Read manga (ma for short)
     #[clap(alias = "ma")]
     Man {

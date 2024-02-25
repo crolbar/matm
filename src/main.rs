@@ -20,6 +20,7 @@ fn main() -> std::io::Result<()> {
                     else { ani::search_anime(select_provider, dub, autoplay)? }
                 }
 
+                #[cfg(target_os = "linux")]
                 Comms::Man {c, delete, clean } =>{
                     if clean {man::delete_cache()}
                     else if delete { Hist::delete_hist(DataType::ManData) }
@@ -39,6 +40,7 @@ fn main() -> std::io::Result<()> {
             match selector::select(
                 vec![
                     String::from("watch anime"),
+                    #[cfg(target_os = "linux")]
                     String::from("read manga"),
                     String::from("watch movie/tv show"),
                     String::from("quit")
