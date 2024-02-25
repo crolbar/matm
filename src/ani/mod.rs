@@ -153,23 +153,29 @@ impl Ani {
                     if sources.subs.is_empty() {
                         println!("{}Could't find subtitles", "\x1b[31m");
 
-                        vec![
-                            sources.video,
-                            format!("--force-media-title={} Episode {}", self.name, self.ep),
-                            String::from("--fs")
-                        ]
+                        format!(
+                            "mpv \"{}\" --force-media-title=\"{} Episode: {}\" --fs",
+                            sources.video, self.name, self.ep
+                        )
                     } else {
-                        vec![
-                            sources.video,
-                            format!("--sub-file={}",sources.subs),
-                            format!("--force-media-title={} Episode {}", self.name, self.ep),
-                            String::from("--fs")
-                        ]
+                        format!(
+                            "mpv \"{}\" --sub-file={} --force-media-title=\"{} Episode: {}\" -fs",
+                            sources.video, sources.subs, self.name, self.ep
+                        )
                     };
 
-                Command::new("mpv")
-                    .args(args)
-                    .spawn().expect("crashed when trying to start mpv")
+                #[cfg(target_os = "android")]
+                let args = {
+                    format!(
+                        "am start -a android.intent.action.VIEW -n is.xyz.mpv/.MPVActivity -d \"{}\" >/dev/null",
+                        sources.video 
+                    )
+                };
+
+                Command::new("sh")
+                    .arg("-c")
+                    .arg(args)
+                    .spawn().expect("crashed trying to start mpv")
                     .wait().unwrap();
             }
             Err(e) => {
