@@ -326,9 +326,14 @@ fn get_sources(data_id: &str) -> Result<Sources, Box<dyn std::error::Error>> {
                     )
                 };
 
-                if let Ok(key) = &get_response(&url) {
-                    serde_json::from_str(key).expect("couldnt deserialize string to vec")
-                } else {
+                let k = 
+                    if let Ok(key) = &get_response(&url) {
+                        if let Ok(k) = serde_json::from_str(key) {
+                            Some(k)
+                        } else { None }
+                    } else { None };
+
+                if let Some(key) = k { key } else {
                     let key: Vec<Vec<u32>> = serde_json::from_str(
                         &get_response(&fallback_url).expect("couldn't get key")
                     ).expect("couldnt deserialize string to vec");
