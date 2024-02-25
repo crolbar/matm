@@ -81,9 +81,18 @@ pub fn update(app: &mut Selector, tui: &mut Tui) -> Result<()> {
                 MouseEventKind::ScrollDown => app.sel_next_item(),
                 MouseEventKind::ScrollUp => app.sel_prev_item(),
                 MouseEventKind::Down(_) => {
+                    #[cfg(target_os = "windows")]
+                    let tmp_sel = app.table_state.selected().unwrap();
+
                     app.handle_mb_down(mouse_ev);
                     tui.draw(app)?;
 
+                    #[cfg(target_os = "windows")]
+                    if app.table_state.selected().unwrap() == tmp_sel {
+                        app.exit = true
+                    }
+
+                    #[cfg(not(target_os = "windows"))]
                     if let Ok(Event::Mouse(MouseEvent { kind: MouseEventKind::Up(_), .. })) = event::read() {
                         if crossterm::event::poll(std::time::Duration::from_millis(200))? {
                             if let Ok(Event::Mouse(MouseEvent { kind: MouseEventKind::Down(_), .. })) = event::read() {
