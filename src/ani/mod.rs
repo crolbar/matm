@@ -223,7 +223,7 @@ impl Ani {
         let video_type = if self.is_dub {"dub"} else {"sub"};
 
         let response = get_response(
-            &format!("https://aniwatch.to/ajax/v2/episode/servers?episodeId={}", ep_id)
+            &format!("https://aniwatchtv.to/ajax/v2/episode/servers?episodeId={}", ep_id)
         ).unwrap();
 
         let mut pattern = format!("data-type=\\\"{}\\\" data-id=\\\"", video_type);
@@ -272,7 +272,7 @@ impl Ani {
     }
 
     fn update_ep_ids(&mut self) {
-        let episodes_url = format!("https://aniwatch.to/ajax/v2/episode/list/{}", self.id);
+        let episodes_url = format!("https://aniwatchtv.to/ajax/v2/episode/list/{}", self.id);
         let episodes_json: Value = 
             serde_json::from_str(
                 &get_response(&episodes_url).unwrap_or_else(|_| {
@@ -303,7 +303,7 @@ fn get_query() -> String {
 }
 
 fn get_sources(data_id: &str) -> Result<Sources, Box<dyn std::error::Error>> {
-    let url = format!("https://aniwatch.to/ajax/v2/episode/sources?id={}", data_id);
+    let url = format!("https://aniwatchtv.to/ajax/v2/episode/sources?id={}", data_id);
     let provider: Value = serde_json::from_str(&get_response(&url)?)?;
     let provider_url = provider["link"].as_str().ok_or("Missing 'link' field")?;
 

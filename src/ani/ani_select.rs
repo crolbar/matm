@@ -14,7 +14,7 @@ impl Ani {
         let mut ids: Vec<String> = Vec::new();
 
         for page_num in 1..=5 { 
-            let url = format!("https://aniwatch.to/search?keyword={}&page={}", query, page_num);
+            let url = format!("https://aniwatchtv.to/search?keyword={}&page={}", query, page_num);
             let response = get_response(&url)
                 .unwrap_or_else(|_| {
                     println!("{}No internet connection", "\x1b[33m");
@@ -73,7 +73,7 @@ impl Ani {
 
 
     fn select_episode(id: usize, name: String) -> std::io::Result<Ani> {
-        let episodes_url = format!("https://aniwatch.to/ajax/v2/episode/list/{}", id);
+        let episodes_url = format!("https://aniwatchtv.to/ajax/v2/episode/list/{}", id);
         let episodes_json: Value = serde_json::from_str(&get_response(&episodes_url).unwrap()).unwrap();
 
         let episodes_html = Html::parse_document(episodes_json["html"].as_str().unwrap());

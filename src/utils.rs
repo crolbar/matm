@@ -124,15 +124,12 @@ use base64::{Engine, engine::general_purpose::STANDARD};
 use serde_json::Value;
 
 pub fn get_e4_key() -> String {
-    let k: Vec<u8> = {
-        let resp = get_response("https://keys4.fun").unwrap();
+    let resp = get_response("https://keys4.fun").unwrap();
 
-        serde_json::from_str::<Value>(&resp).unwrap()
-            ["rabbitstream"].as_object().unwrap()
-            ["keys"].as_array().unwrap().iter()
-                .map(|i| i.as_u64().unwrap() as u8).collect()
-    };
-    STANDARD.encode(k)
+    serde_json::from_str::<Value>(&resp).unwrap()
+        ["rabbitstream"].as_object().unwrap()
+        ["keys"].as_object().unwrap()
+        ["key"].as_str().unwrap().to_string()
 }
 
 pub fn decrypt_url(enc_sources: String, extracted_key: String) -> String {
