@@ -200,7 +200,7 @@ impl Ani {
 
     fn select_provider(&mut self) -> std::io::Result<()> {
         let mut p = self.providers.keys()
-            .filter(|i| *i == "Vidstreaming" || *i == "MegaCloud")
+            .filter(|i| *i == "VidSrc" || *i == "MegaCloud")
             .map(|i| i.to_owned())
             .collect::<Vec<String>>();
         p.sort();
