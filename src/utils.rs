@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use clap::Parser;
 
 /// matm 
@@ -83,7 +85,12 @@ pub struct Sources {
 
 #[tokio::main] 
 pub async fn get_response(url: &str) -> Result<String, reqwest::Error> {
-    Ok(reqwest::get(url)
+    let c = Client::builder()
+        .timeout(Duration::from_secs(8))
+        .build()?;
+        
+    Ok(c.get(url)
+       .send()
        .await?
        .text()
        .await?
@@ -121,6 +128,7 @@ pub fn extract_key(url: String, key: Vec<Vec<u32>>) -> (String, String) {
 }
 
 use base64::{Engine, engine::general_purpose::STANDARD};
+use reqwest::Client;
 use serde_json::Value;
 
 pub fn get_e4_key() -> String {
