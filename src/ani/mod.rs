@@ -340,7 +340,7 @@ fn get_sources(data_id: &str) -> Result<Sources, Box<dyn std::error::Error>> {
             let key: Vec<Vec<u32>> = {
                 let (url, fallback_url) = {
                     (
-                        format!( "http://crolbar.xyz/key/e{}", embed_type),
+                        format!( "https://crolbar.xyz/key/e{}", embed_type),
                         format!( "https://raw.githubusercontent.com/AuraStar553/keys/e{}/key", embed_type)
                     )
                 };
