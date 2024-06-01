@@ -1,4 +1,4 @@
-use crate::utils::{get_sources_response, get_response, decrypt_url, Sources, extract_key, get_e4_key};
+use crate::utils::{get_response, Sources};
 use std::{process::Command, collections::HashMap};
 use serde::{Deserialize, Serialize};
 use crate::hist::{Hist, DataType};
@@ -332,65 +332,38 @@ fn get_sources(data_id: String) -> Result<Sources, Box<dyn std::error::Error>> {
     let provider: Value = serde_json::from_str(&get_response(&url)?)?;
     let provider_url = provider["link"].as_str().ok_or("Missing 'link' field")?;
 
-    let embed_type = provider_url.split_once("embed-").unwrap().1.chars().next().unwrap();
+    //let embed_type = provider_url.split_once("embed-").unwrap().1.chars().next().unwrap();
 
-    let url = format!("https://{}/ajax/embed-{}/getSources?id={}",
-        provider_url.split_once("https://").unwrap().1.split_once('/').unwrap().0,
-        embed_type,
+    let url = format!("http://provider.akt2.yatara.be:31077/rabbit/{}",
         provider_url.rsplit_once("/").unwrap().1.split_once("?").unwrap().0
     );
-    let response = get_sources_response(&url)?;
+    let response = get_response(&url)?;
     
-    
-    let sources_json: Value = if serde_json::from_str::<Value>(&response).is_ok() {
-        serde_json::from_str(&response).unwrap()
+    let sources_json: Value = if let Ok(sources) = serde_json::from_str::<Value>(&response) {
+        sources
     } else { 
         println!("{}Couldn't deserialize sources page. Maybe the provier server is down?", "\x1b[31m");
         std::process::exit(1)
     };
 
-    let mut subs = String::new();
-    if let Some(english_sub) =
-        sources_json["tracks"]
-            .as_array()
-            .ok_or("Missing 'tracks' field")?
-            .iter().find(|v| v["label"].to_string().contains("English")) 
-    {
-        subs = english_sub["file"].as_str().unwrap_or_default().to_string()
-    }
 
-    let video = 
-        if sources_json["encrypted"].as_bool().unwrap() {
-            let enc_sources = sources_json["sources"].as_str().unwrap().to_string();
-            let url_key = 
-                if embed_type != '4' {
-                    let (url, fallback_url) = {
+    let subs = 
+        if let Some(english_sub) =
+            sources_json["tracks"]
+                .as_array()
+                .ok_or("Missing 'tracks' field")?
+                .iter().find(|v| v["label"].to_string().contains("English")) 
+        {
+            english_sub["file"].as_str().unwrap_or_default().to_string()
+        } else { String::new() };
 
-                        (
-                            format!( "http://crolbar.xyz/key/e{}", embed_type),
-                            format!( "http://zoro-keys.freeddns.org/keys/e{}/key.txt", embed_type)
-                        )
-                    };
 
-                    let key: Vec<Vec<u32>> = serde_json::from_str(
-                        &get_response(&url)
-                        .unwrap_or(
-                            get_response(&fallback_url).expect("couldn't get key")
-                            )).expect("couldnt deserialize vec");
-
-                    extract_key(enc_sources, key)
-                } else {
-                    (enc_sources, get_e4_key())
-                };
-
-            decrypt_url(url_key.0, url_key.1)
-        } else { 
-            sources_json["sources"]
-                .as_array().unwrap()[0]
-                .as_object().unwrap()
-                ["file"].as_str().unwrap()
-                .to_string() 
-        };
+    let video = sources_json["sources"]
+        .as_array().unwrap()
+        .first().unwrap()
+        .as_object().unwrap()
+        ["file"].as_str().unwrap()
+        .to_string();
 
     Ok(Sources {video, subs})
 }

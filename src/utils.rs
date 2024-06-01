@@ -97,18 +97,6 @@ pub async fn get_response(url: &str) -> Result<String, reqwest::Error> {
     )
 }
 
-#[tokio::main] 
-pub async fn get_sources_response(url: &str,) -> Result<String, reqwest::Error> {
-    let client = reqwest::Client::new();
-    Ok(client
-        .get(url)
-        .header("X-Requested-With","XMLHttpRequest")
-        .send().await?
-        .text().await? 
-        .to_string()
-    )
-}
-
 /// 0 is url, 1 is key
 pub fn extract_key(url: String, key: Vec<Vec<u32>>) -> (String, String) {
     let mut extracted_key = String::new();
@@ -130,15 +118,6 @@ pub fn extract_key(url: String, key: Vec<Vec<u32>>) -> (String, String) {
 use base64::{Engine, engine::general_purpose::STANDARD};
 use reqwest::Client;
 use serde_json::Value;
-
-pub fn get_e4_key() -> String {
-    let resp = get_response("https://keys4.fun").unwrap();
-
-    serde_json::from_str::<Value>(&resp).unwrap()
-        ["rabbitstream"].as_object().unwrap()
-        ["keys"].as_object().unwrap()
-        ["key"].as_str().unwrap().to_string()
-}
 
 pub fn decrypt_url(enc_sources: String, extracted_key: String) -> String {
     use openssl::{symm::{decrypt, Cipher}, hash::{hash, MessageDigest}};
