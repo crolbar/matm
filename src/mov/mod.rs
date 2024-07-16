@@ -334,7 +334,7 @@ fn get_sources(data_id: String) -> Result<Sources, Box<dyn std::error::Error>> {
 
     //let embed_type = provider_url.split_once("embed-").unwrap().1.chars().next().unwrap();
 
-    let url = format!("http://provider.akt2.yatara.be:31077/rabbit/{}",
+    let url = format!("http://provider.akash-palmito.org:30174/rabbit/{}",
         provider_url.rsplit_once("/").unwrap().1.split_once("?").unwrap().0
     );
     let response = get_response(&url)?;
