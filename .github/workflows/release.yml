@@ -1,0 +1,97 @@
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  project: 'matm'
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+
+    runs-on: ${{ matrix.os }}
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+
+      - name: Cache Rustup
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.rustup/settings.toml
+            ~/.rustup/toolchains/${{ matrix.target }}-*
+            ~/.rustup/update-hashes/${{ matrix.target }}-*
+          key: run-toolchain-rust_${{ matrix.target }}
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --release --target=${{ matrix.target }}
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: test
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.project }}_${{ matrix.target }}
+          path: |
+            ./target/${{ matrix.target }}/release/${{ env.project }}
+            ./target/${{ matrix.target }}/release/${{ env.project }}.exe
+
+  release:
+    needs: [ test ]
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Download
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+
+      - name: Archives
+        run: |
+          for dir in $(find artifacts -mindepth 1 -maxdepth 1 -type d); do
+            file=$(ls "$dir")
+            chmod +x "$dir/$file"
+            tar -czvf "$dir.tar.gz" -C "$dir" "$file"
+          done
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
